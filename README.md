@@ -10,3 +10,7 @@ This entire project is vibe code, so it may contain bugs.
 Shortcut:
 - Click on the frame/video (screenshot or streaming) to mark, note that all coords are static relatively to the site canvas, not relatively to the game.
 - Hover one of the two points and press `D` to delete the pair.
+
+# Screenshot
+
+![Survey marking demo](https://oh8mpamos2yycmom.public.blob.vercel-storage.com/survey-marking-demo.webp)

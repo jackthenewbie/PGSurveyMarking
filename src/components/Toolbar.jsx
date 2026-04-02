@@ -90,7 +90,7 @@ export function Toolbar({
                 : buttonStyle("1px solid white", "rgba(0,0,0,0.7)", "white")
             }
           >
-            {selectMode ? "✔ Select mode" : "⬚ Select mode"}
+            {selectMode ? "✔ Select to draw optimize path" : "⬚ Select to draw optimize path"}
           </button>
           {hasPaths && (
             <button
