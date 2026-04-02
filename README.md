@@ -1,16 +1,12 @@
-# React + Vite
+This project is made for surveying in Project Gorgon.
+It is used to mark pairs of 2 points, hover the mouse over a point to highlight it.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Inspired by [GorgonSurveyTracker](https://github.com/kaeus/GorgonSurveyTracker).
 
-Currently, two official plugins are available:
+# Warning
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+This entire project is vibe code, so it may contain bugs.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Shortcut:
+- Click on the frame/video (screenshot or streaming) to mark, note that all coords are static relatively to the site canvas, not relatively to the game.
+- Hover one of the two points and press `D` to delete the pair.
