@@ -6,17 +6,24 @@ import { clamp } from "../utils/math";
 import { shortestOpenPath } from "../utils/pathing";
 import { useViewport } from "./useViewport";
 
+const DEFAULT_MODE = "screenshot";
+const DEFAULT_SURFACE_SIZE = { width: 0, height: 0 };
+const DEFAULT_ZOOM_ORIGIN = { x: 50, y: 50 };
+
 function renumberPairs(pairs) {
   return pairs.map((pair, index) => ({ ...pair, id: index + 1 }));
 }
 
 export function useLinkedMapState() {
   const blobRef = useRef(null);
+  const streamRef = useRef(null);
+  const sourceRequestIdRef = useRef(0);
   const nextDotIdRef = useRef(1);
   const nextPathIdRef = useRef(1);
   const viewport = useViewport();
-  const [imageUrl, setImageUrl] = useState(null);
-  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [mode, setMode] = useState(DEFAULT_MODE);
+  const [mediaSource, setMediaSource] = useState(null);
+  const [surfaceSize, setSurfaceSize] = useState(DEFAULT_SURFACE_SIZE);
   const [pendingPoint, setPendingPoint] = useState(null);
   const [pairs, setPairs] = useState([]);
   const [hoveredPairId, setHoveredPairId] = useState(null);
@@ -25,11 +32,22 @@ export function useLinkedMapState() {
   const [dragCurrent, setDragCurrent] = useState(null);
   const [paths, setPaths] = useState([]);
   const [zoomScale, setZoomScale] = useState(MIN_ZOOM_SCALE);
-  const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 });
+  const [zoomOrigin, setZoomOrigin] = useState(DEFAULT_ZOOM_ORIGIN);
 
   useEffect(() => {
     return () => {
-      if (blobRef.current) URL.revokeObjectURL(blobRef.current);
+      if (blobRef.current) {
+        URL.revokeObjectURL(blobRef.current);
+        blobRef.current = null;
+      }
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => {
+          track.onended = null;
+          track.stop();
+        });
+        streamRef.current = null;
+      }
     };
   }, []);
 
@@ -50,38 +68,93 @@ export function useLinkedMapState() {
   }, [hoveredPairId]);
 
   const stageSize = useMemo(() => {
-    if (!imageSize.width || !imageSize.height) return { width: 0, height: 0 };
+    if (!surfaceSize.width || !surfaceSize.height) return DEFAULT_SURFACE_SIZE;
     const scale = Math.min(
-      viewport.width / imageSize.width,
-      viewport.height / imageSize.height
+      viewport.width / surfaceSize.width,
+      viewport.height / surfaceSize.height
     );
     return {
-      width: Math.round(imageSize.width * scale),
-      height: Math.round(imageSize.height * scale),
+      width: Math.round(surfaceSize.width * scale),
+      height: Math.round(surfaceSize.height * scale),
     };
-  }, [imageSize, viewport]);
+  }, [surfaceSize, viewport]);
 
-  function resetInteractiveState() {
+  function resetAnnotationState() {
     setPairs([]);
     setPendingPoint(null);
     setHoveredPairId(null);
+    setSelectMode(false);
+    setDragStart(null);
+    setDragCurrent(null);
     setPaths([]);
     setZoomScale(MIN_ZOOM_SCALE);
-    setZoomOrigin({ x: 50, y: 50 });
+    setZoomOrigin(DEFAULT_ZOOM_ORIGIN);
     nextDotIdRef.current = 1;
     nextPathIdRef.current = 1;
   }
 
+  function disposeCurrentMedia() {
+    if (blobRef.current) {
+      URL.revokeObjectURL(blobRef.current);
+      blobRef.current = null;
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        track.onended = null;
+        track.stop();
+      });
+      streamRef.current = null;
+    }
+  }
+
+  function nextSourceRequestId() {
+    sourceRequestIdRef.current += 1;
+    return sourceRequestIdRef.current;
+  }
+
+  function clearSource() {
+    nextSourceRequestId();
+    disposeCurrentMedia();
+    setMediaSource(null);
+    setSurfaceSize(DEFAULT_SURFACE_SIZE);
+    resetAnnotationState();
+  }
+
+  function updateSurfaceSize(width, height) {
+    if (!width || !height) return;
+    setSurfaceSize((current) =>
+      current.width === width && current.height === height ? current : { width, height }
+    );
+  }
+
+  function changeMode(nextMode) {
+    if (nextMode === mode) return;
+    clearSource();
+    setMode(nextMode);
+  }
+
   function loadFile(file) {
     if (!file || !file.type.startsWith("image/")) return;
+
+    const requestId = nextSourceRequestId();
     const url = URL.createObjectURL(file);
-    if (blobRef.current) URL.revokeObjectURL(blobRef.current);
-    blobRef.current = url;
     const image = new Image();
     image.onload = () => {
-      setImageSize({ width: image.naturalWidth, height: image.naturalHeight });
-      setImageUrl(url);
-      resetInteractiveState();
+      if (sourceRequestIdRef.current !== requestId) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      disposeCurrentMedia();
+      blobRef.current = url;
+      setMode("screenshot");
+      setMediaSource({ kind: "image", src: url });
+      setSurfaceSize({ width: image.naturalWidth, height: image.naturalHeight });
+      resetAnnotationState();
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
     };
     image.src = url;
   }
@@ -90,6 +163,46 @@ export function useLinkedMapState() {
     const file = event.target.files?.[0];
     if (file) loadFile(file);
     event.target.value = "";
+  }
+
+  async function startScreenShare() {
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      throw new Error("Screen capture is not supported in this browser.");
+    }
+
+    const requestId = nextSourceRequestId();
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: false,
+    });
+
+    if (sourceRequestIdRef.current !== requestId) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+
+    const [videoTrack] = stream.getVideoTracks();
+
+    if (!videoTrack) {
+      stream.getTracks().forEach((track) => track.stop());
+      throw new Error("The selected share source did not provide a video track.");
+    }
+
+    disposeCurrentMedia();
+    streamRef.current = stream;
+    videoTrack.onended = () => {
+      if (streamRef.current !== stream) return;
+      clearSource();
+    };
+
+    const settings = videoTrack.getSettings();
+    setMode("stream");
+    setMediaSource({ kind: "stream", stream });
+    setSurfaceSize({
+      width: Number(settings.width) || 0,
+      height: Number(settings.height) || 0,
+    });
+    resetAnnotationState();
   }
 
   function handleStageClick(event) {
@@ -198,6 +311,7 @@ export function useLinkedMapState() {
   return {
     dragCurrent,
     dragStart,
+    changeMode,
     downloadCoordinates,
     handleFileChange,
     handleMouseDown,
@@ -206,14 +320,18 @@ export function useLinkedMapState() {
     handleStageClick,
     handleStageWheel,
     hoveredPairId,
-    imageUrl,
+    hasSource: mediaSource != null,
+    mediaSource,
+    mode,
     pairs,
     paths,
     pendingPoint,
     selectMode,
     setHoveredPairId,
+    startScreenShare,
     stageSize,
     toggleSelectMode,
+    updateSurfaceSize,
     clearCoordinates,
     clearCoordinatesAndPaths,
     clearPaths: () => setPaths([]),

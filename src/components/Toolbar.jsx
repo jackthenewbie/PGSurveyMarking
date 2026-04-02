@@ -3,16 +3,20 @@ import { useState } from "react";
 export function Toolbar({
   hasCoordinates,
   hasPaths,
+  mode,
   selectMode,
   onBackupCoordinates,
   onRestoreCoordinates,
   onClearCoordinates,
   onClearCoordinatesAndPaths,
   onClearPaths,
-  onNewImage,
+  onChangeMode,
+  onSelectImage,
+  onStartSharing,
   onToggleSelectMode,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const isScreenshotMode = mode === "screenshot";
 
   return (
     <div
@@ -40,12 +44,28 @@ export function Toolbar({
       </button>
       {isOpen && (
         <div style={panelStyle}>
+          <div style={modeGroupStyle}>
+            <button
+              type="button"
+              onClick={() => onChangeMode("screenshot")}
+              style={isScreenshotMode ? activeModeButtonStyle : inactiveModeButtonStyle}
+            >
+              Screenshot
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeMode("stream")}
+              style={!isScreenshotMode ? activeModeButtonStyle : inactiveModeButtonStyle}
+            >
+              Live stream
+            </button>
+          </div>
           <button
             type="button"
-            onClick={onNewImage}
+            onClick={isScreenshotMode ? onSelectImage : onStartSharing}
             style={buttonStyle("1px solid white", "rgba(0,0,0,0.7)", "white")}
           >
-            New image
+            {isScreenshotMode ? "New image" : "Start sharing"}
           </button>
           <button
             type="button"
@@ -129,6 +149,13 @@ const panelStyle = {
   background: "rgba(10,10,10,0.92)",
 };
 
+const modeGroupStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 6,
+  width: "100%",
+};
+
 const menuButtonStyle = {
   display: "flex",
   flexDirection: "column",
@@ -147,4 +174,16 @@ const menuLineStyle = {
   width: "100%",
   height: "2px",
   background: "white",
+};
+
+const inactiveModeButtonStyle = {
+  ...buttonStyle("1px solid rgba(255,255,255,0.35)", "rgba(0,0,0,0.7)", "white"),
+  minWidth: 0,
+  textAlign: "center",
+};
+
+const activeModeButtonStyle = {
+  ...buttonStyle("1px solid #00e5ff", "rgba(0,229,255,0.12)", "#00e5ff"),
+  minWidth: 0,
+  textAlign: "center",
 };

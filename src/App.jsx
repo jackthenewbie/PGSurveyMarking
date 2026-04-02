@@ -23,6 +23,17 @@ export default function LinkedMapMarkerSite() {
     }
   }
 
+  async function handleStartSharing() {
+    try {
+      await state.startScreenShare();
+    } catch (error) {
+      if (error instanceof DOMException && ["AbortError", "NotAllowedError"].includes(error.name)) {
+        return;
+      }
+      window.alert(error instanceof Error ? error.message : "Failed to start screen sharing.");
+    }
+  }
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "#111", overflow: "hidden" }}>
       <input ref={inputRef} type="file" accept="image/*" onChange={state.handleFileChange} style={{ display: "none" }} />
@@ -33,27 +44,35 @@ export default function LinkedMapMarkerSite() {
         onChange={handleRestoreChange}
         style={{ display: "none" }}
       />
-      {!state.imageUrl ? (
-        <UploadScreen onUpload={() => inputRef.current?.click()} />
+      {!state.hasSource ? (
+        <UploadScreen
+          mode={state.mode}
+          onChangeMode={state.changeMode}
+          onSelectImage={() => inputRef.current?.click()}
+          onStartSharing={handleStartSharing}
+        />
       ) : (
         <>
           <Toolbar
             hasCoordinates={state.pairs.length > 0}
             hasPaths={state.paths.length > 0}
+            mode={state.mode}
             selectMode={state.selectMode}
             onBackupCoordinates={state.downloadCoordinates}
             onRestoreCoordinates={() => restoreInputRef.current?.click()}
             onClearCoordinates={state.clearCoordinates}
             onClearCoordinatesAndPaths={state.clearCoordinatesAndPaths}
             onClearPaths={state.clearPaths}
-            onNewImage={() => inputRef.current?.click()}
+            onChangeMode={state.changeMode}
+            onSelectImage={() => inputRef.current?.click()}
+            onStartSharing={handleStartSharing}
             onToggleSelectMode={state.toggleSelectMode}
           />
           <MapStage
             dragCurrent={state.dragCurrent}
             dragStart={state.dragStart}
             hoveredPairId={state.hoveredPairId}
-            imageUrl={state.imageUrl}
+            mediaSource={state.mediaSource}
             pairs={state.pairs}
             paths={state.paths}
             pendingPoint={state.pendingPoint}
@@ -61,6 +80,7 @@ export default function LinkedMapMarkerSite() {
             stageSize={state.stageSize}
             zoomOrigin={state.zoomOrigin}
             zoomScale={state.zoomScale}
+            onSurfaceReady={state.updateSurfaceSize}
             onHoverPair={state.setHoveredPairId}
             onMouseDown={state.handleMouseDown}
             onMouseMove={state.handleMouseMove}
