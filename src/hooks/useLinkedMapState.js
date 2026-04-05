@@ -3,7 +3,9 @@ import { DEFAULT_BLOCK_SIZE, DEFAULT_GROUP_SPACING, MIN_ZOOM_SCALE } from "../co
 import { normalizeSquareBlockSize } from "../utils/blockSize"
 import {
   clearPersistedAnnotationState,
+  loadPersistedAnnotationSettings,
   loadPersistedAnnotationState,
+  savePersistedAnnotationSettings,
   savePersistedAnnotationState,
 } from "../utils/browserStorage"
 import { createDragHandlers } from "./linkedMapState/dragHandlers"
@@ -54,6 +56,7 @@ function areSnapshotsEqual(left, right) {
 }
 
 export function useLinkedMapState() {
+  const persistedSettingsRef = useRef(loadPersistedAnnotationSettings())
   const nextPathIdRef = useRef(1)
   const nextGroupIdRef = useRef(1)
   const hasLoadedPersistedStateRef = useRef(false)
@@ -77,8 +80,10 @@ export function useLinkedMapState() {
   const [paths, setPaths] = useState([])
   const [zoomScale, setZoomScale] = useState(MIN_ZOOM_SCALE)
   const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 })
-  const [blockSize, setBlockSize] = useState(DEFAULT_BLOCK_SIZE)
-  const [groupSpacing, setGroupSpacing] = useState(DEFAULT_GROUP_SPACING)
+  const [blockSize, setBlockSize] = useState(persistedSettingsRef.current?.blockSize ?? DEFAULT_BLOCK_SIZE)
+  const [groupSpacing, setGroupSpacing] = useState(
+    persistedSettingsRef.current?.groupSpacing ?? DEFAULT_GROUP_SPACING
+  )
   const [showMarkerLabels, setShowMarkerLabels] = useState(true)
   const [resizeState, setResizeState] = useState(null)
   const [spacingDragState, setSpacingDragState] = useState(null)
@@ -155,6 +160,8 @@ export function useLinkedMapState() {
   }
 
   const resetters = createAnnotationResetters({
+    getDefaultBlockSize: () => persistedSettingsRef.current?.blockSize ?? DEFAULT_BLOCK_SIZE,
+    getDefaultGroupSpacing: () => persistedSettingsRef.current?.groupSpacing ?? DEFAULT_GROUP_SPACING,
     nextGroupIdRef,
     nextPathIdRef,
     setActiveMarkerId,
@@ -248,6 +255,14 @@ export function useLinkedMapState() {
       paths,
     })
   }, [blockSize, groupSpacing, groups, markers, paths])
+
+  useEffect(() => {
+    persistedSettingsRef.current = { blockSize, groupSpacing }
+    savePersistedAnnotationSettings({
+      blockSize,
+      groupSpacing,
+    })
+  }, [blockSize, groupSpacing])
 
   useEffect(() => {
     annotationSnapshotRef.current = {

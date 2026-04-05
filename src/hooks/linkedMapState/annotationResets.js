@@ -21,6 +21,8 @@ function clearInteractionState({
 }
 
 export function createAnnotationResetters({
+  getDefaultBlockSize,
+  getDefaultGroupSpacing,
   nextGroupIdRef,
   nextPathIdRef,
   setActiveMarkerId,
@@ -42,6 +44,9 @@ export function createAnnotationResetters({
   setZoomScale,
 }) {
   function resetAnnotationState() {
+    const defaultBlockSize = getDefaultBlockSize?.() ?? DEFAULT_BLOCK_SIZE
+    const defaultGroupSpacing = getDefaultGroupSpacing?.() ?? DEFAULT_GROUP_SPACING
+
     setMarkers([])
     setHoveredMarkerId(null)
     setGroups([])
@@ -50,8 +55,8 @@ export function createAnnotationResetters({
     setPaths([])
     setZoomScale(MIN_ZOOM_SCALE)
     setZoomOrigin(DEFAULT_ZOOM_ORIGIN)
-    setBlockSize(DEFAULT_BLOCK_SIZE)
-    setGroupSpacing(DEFAULT_GROUP_SPACING)
+    setBlockSize(defaultBlockSize)
+    setGroupSpacing(defaultGroupSpacing)
     clearInteractionState({
       setPendingPoint,
       setActiveMarkerId,

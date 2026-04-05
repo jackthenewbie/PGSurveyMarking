@@ -2,6 +2,7 @@ import { DEFAULT_BLOCK_SIZE, DEFAULT_GROUP_SPACING } from "../constants"
 import { clamp } from "./math"
 
 const STORAGE_KEY = "linked-map.annotation-state.v1"
+const SETTINGS_STORAGE_KEY = "linked-map.annotation-settings.v1"
 
 function normalizeCoordinate(value, axis) {
   if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -78,6 +79,18 @@ function serializeAnnotationState({ blockSize, groupSpacing, groups, markers, pa
       : [],
     paths: Array.isArray(paths) ? paths.map(normalizePath) : [],
   })
+}
+
+function parsePersistedAnnotationSettings(text) {
+  const parsed = JSON.parse(text)
+
+  return {
+    blockSize: {
+      width: normalizeCoordinate(parsed?.blockSize?.width ?? DEFAULT_BLOCK_SIZE.width, "block width"),
+      height: normalizeCoordinate(parsed?.blockSize?.height ?? DEFAULT_BLOCK_SIZE.height, "block height"),
+    },
+    groupSpacing: normalizeCoordinate(parsed?.groupSpacing ?? DEFAULT_GROUP_SPACING, "group spacing"),
+  }
 }
 
 export function parsePersistedAnnotationState(text) {
@@ -158,6 +171,39 @@ export function savePersistedAnnotationState(state) {
     window.localStorage.setItem(STORAGE_KEY, serializeAnnotationState(state))
   } catch {
     window.localStorage.removeItem(STORAGE_KEY)
+  }
+}
+
+export function loadPersistedAnnotationSettings() {
+  if (typeof window === "undefined" || !window.localStorage) return null
+
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
+    if (!raw) return null
+    return parsePersistedAnnotationSettings(raw)
+  } catch {
+    window.localStorage.removeItem(SETTINGS_STORAGE_KEY)
+    return null
+  }
+}
+
+export function savePersistedAnnotationSettings({ blockSize, groupSpacing }) {
+  if (typeof window === "undefined" || !window.localStorage) return
+
+  try {
+    window.localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        blockSize: {
+          width: normalizeCoordinate(blockSize?.width ?? DEFAULT_BLOCK_SIZE.width, "block width"),
+          height: normalizeCoordinate(blockSize?.height ?? DEFAULT_BLOCK_SIZE.height, "block height"),
+        },
+        groupSpacing: normalizeCoordinate(groupSpacing ?? DEFAULT_GROUP_SPACING, "group spacing"),
+      })
+    )
+  } catch {
+    window.localStorage.removeItem(SETTINGS_STORAGE_KEY)
   }
 }
 
