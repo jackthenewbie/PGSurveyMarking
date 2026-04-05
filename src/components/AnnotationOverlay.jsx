@@ -69,6 +69,7 @@ export function AnnotationOverlay({
             blockSize={blockSize}
             groupLayout={group}
             groupSpacing={groupSpacing}
+            stageSize={stageSize}
             onStartSpacingDrag={onStartSpacingDrag}
           />
         ))}

@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { getGroupSpacingPercent } from "../utils/groupSpacing";
 
 export function GroupSpacingHandle({
   blockSize,
   groupLayout,
   groupSpacing,
+  stageSize,
   onStartSpacingDrag,
 }) {
   const [hoveredHandleKey, setHoveredHandleKey] = useState(null);
@@ -14,6 +16,8 @@ export function GroupSpacingHandle({
   const occupiedSlots = new Map(
     slots.map((slot, index) => [groupLayout.orderedIds[index], slot])
   );
+  const horizontalSpacing = getGroupSpacingPercent(groupSpacing, stageSize, "x");
+  const verticalSpacing = getGroupSpacingPercent(groupSpacing, stageSize, "y");
   const handles = [];
 
   groupLayout.orderedIds.forEach((markerId) => {
@@ -29,8 +33,8 @@ export function GroupSpacingHandle({
       handles.push({
         key: `x-${markerId}-${rightNeighbor}`,
         axis: "x",
-        left: groupLayout.anchor.x + slot.column * (blockSize.width + groupSpacing) + (blockSize.width + groupSpacing) / 2,
-        top: groupLayout.anchor.y + slot.row * (blockSize.height + groupSpacing),
+        left: groupLayout.anchor.x + slot.column * (blockSize.width + horizontalSpacing) + (blockSize.width + horizontalSpacing) / 2,
+        top: groupLayout.anchor.y + slot.row * (blockSize.height + verticalSpacing),
       });
     }
 
@@ -43,8 +47,8 @@ export function GroupSpacingHandle({
       handles.push({
         key: `y-${markerId}-${lowerNeighbor}`,
         axis: "y",
-        left: groupLayout.anchor.x + slot.column * (blockSize.width + groupSpacing),
-        top: groupLayout.anchor.y + slot.row * (blockSize.height + groupSpacing) + (blockSize.height + groupSpacing) / 2,
+        left: groupLayout.anchor.x + slot.column * (blockSize.width + horizontalSpacing),
+        top: groupLayout.anchor.y + slot.row * (blockSize.height + verticalSpacing) + (blockSize.height + verticalSpacing) / 2,
       });
     }
   });

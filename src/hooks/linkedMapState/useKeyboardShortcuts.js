@@ -23,6 +23,7 @@ export function useKeyboardShortcuts({
   groups,
   hoveredMarkerId,
   markers,
+  stageSize,
   setActiveMarkerId,
   setDragBlockState,
   setDragCurrent,
@@ -65,7 +66,8 @@ export function useKeyboardShortcuts({
           idMapping,
           renumberedMarkers,
           blockSize,
-          groupSpacing
+          groupSpacing,
+          stageSize
         )
 
         setMarkers(nextMarkers)
@@ -104,6 +106,7 @@ export function useKeyboardShortcuts({
     groups,
     hoveredMarkerId,
     markers,
+    stageSize,
     setActiveMarkerId,
     setDragBlockState,
     setDragCurrent,

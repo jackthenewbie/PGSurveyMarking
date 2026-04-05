@@ -1,16 +1,19 @@
+import { getGroupSpacingPercent } from "../../utils/groupSpacing"
+
 function getTopLeftMostMarker(markers) {
   return [...markers].sort((left, right) => left.block.y - right.block.y || left.block.x - right.block.x)[0]
 }
 
-function getGroupingRowThreshold(blockSize, groupSpacing) {
-  return Math.max((blockSize.height + groupSpacing) / 2, blockSize.height * 0.75, 0.5)
+function getGroupingRowThreshold(blockSize, groupSpacing, stageSize) {
+  const verticalSpacing = getGroupSpacingPercent(groupSpacing, stageSize, "y")
+  return Math.max((blockSize.height + verticalSpacing) / 2, blockSize.height * 0.75, 0.5)
 }
 
-function buildMarkersGroupedIntoRows(selectedMarkers, blockSize, groupSpacing) {
+function buildMarkersGroupedIntoRows(selectedMarkers, blockSize, groupSpacing, stageSize) {
   const sortedMarkers = [...selectedMarkers].sort(
     (left, right) => left.block.y - right.block.y || left.block.x - right.block.x
   )
-  const rowThreshold = getGroupingRowThreshold(blockSize, groupSpacing)
+  const rowThreshold = getGroupingRowThreshold(blockSize, groupSpacing, stageSize)
   const rows = []
 
   sortedMarkers.forEach((marker) => {
@@ -51,13 +54,13 @@ export function renumberMarkers(markers) {
   return markers.map((marker, index) => ({ ...marker, id: index + 1 }))
 }
 
-export function createGroupLayout(markers, selectedIds, blockSize, groupSpacing) {
+export function createGroupLayout(markers, selectedIds, blockSize, groupSpacing, stageSize) {
   const selectedMarkers = markers.filter((marker) => selectedIds.includes(marker.id))
 
   if (selectedMarkers.length < 2) return null
 
   const topLeftMarker = getTopLeftMostMarker(selectedMarkers)
-  const rows = buildMarkersGroupedIntoRows(selectedMarkers, blockSize, groupSpacing)
+  const rows = buildMarkersGroupedIntoRows(selectedMarkers, blockSize, groupSpacing, stageSize)
   const { orderedIds, slots } = buildGroupLayoutFromRows(rows)
 
   return {
@@ -67,8 +70,11 @@ export function createGroupLayout(markers, selectedIds, blockSize, groupSpacing)
   }
 }
 
-function applyGroupLayout(markers, groupLayout, blockSize, groupSpacing) {
+function applyGroupLayout(markers, groupLayout, blockSize, groupSpacing, stageSize) {
   if (!groupLayout) return markers
+
+  const horizontalSpacing = getGroupSpacingPercent(groupSpacing, stageSize, "x")
+  const verticalSpacing = getGroupSpacingPercent(groupSpacing, stageSize, "y")
 
   const nextBlocksById = new Map(
     groupLayout.orderedIds.map((markerId, index) => {
@@ -77,8 +83,8 @@ function applyGroupLayout(markers, groupLayout, blockSize, groupSpacing) {
       return [
         markerId,
         {
-          x: groupLayout.anchor.x + slot.column * (blockSize.width + groupSpacing),
-          y: groupLayout.anchor.y + slot.row * (blockSize.height + groupSpacing),
+          x: groupLayout.anchor.x + slot.column * (blockSize.width + horizontalSpacing),
+          y: groupLayout.anchor.y + slot.row * (blockSize.height + verticalSpacing),
         },
       ]
     })
@@ -91,9 +97,9 @@ function applyGroupLayout(markers, groupLayout, blockSize, groupSpacing) {
   )
 }
 
-export function applyGroupLayouts(markers, groups, blockSize, groupSpacing) {
+export function applyGroupLayouts(markers, groups, blockSize, groupSpacing, stageSize) {
   return groups.reduce(
-    (currentMarkers, group) => applyGroupLayout(currentMarkers, group, blockSize, groupSpacing),
+    (currentMarkers, group) => applyGroupLayout(currentMarkers, group, blockSize, groupSpacing, stageSize),
     markers
   )
 }
@@ -123,7 +129,9 @@ export function expandSelectedIdsWithGroups(selectedIds, groups) {
   return [...expandedIds]
 }
 
-export function remapGroups(groups, idMapping, markers, blockSize, groupSpacing) {
+export function remapGroups(groups, idMapping, markers, blockSize, groupSpacing, stageSize) {
+  const horizontalSpacing = getGroupSpacingPercent(groupSpacing, stageSize, "x")
+  const verticalSpacing = getGroupSpacingPercent(groupSpacing, stageSize, "y")
   const singleMarkerBlocks = new Map()
   const nextGroups = groups
     .map((group) => {
@@ -135,8 +143,8 @@ export function remapGroups(groups, idMapping, markers, blockSize, groupSpacing)
         const slot = group.slots?.[0] ?? { column: 0, row: 0 }
 
         singleMarkerBlocks.set(nextOrderedIds[0], {
-          x: group.anchor.x + slot.column * (blockSize.width + groupSpacing),
-          y: group.anchor.y + slot.row * (blockSize.height + groupSpacing),
+          x: group.anchor.x + slot.column * (blockSize.width + horizontalSpacing),
+          y: group.anchor.y + slot.row * (blockSize.height + verticalSpacing),
         })
         return null
       }
@@ -159,21 +167,23 @@ export function remapGroups(groups, idMapping, markers, blockSize, groupSpacing)
 
   return {
     groups: nextGroups,
-    markers: applyGroupLayouts(nextMarkers, nextGroups, blockSize, groupSpacing),
+    markers: applyGroupLayouts(nextMarkers, nextGroups, blockSize, groupSpacing, stageSize),
   }
 }
 
-export function getGroupAdjustedForResizedMarker(group, markerId, markerBlock, blockSize, groupSpacing) {
+export function getGroupAdjustedForResizedMarker(group, markerId, markerBlock, blockSize, groupSpacing, stageSize) {
   if (!group?.orderedIds.includes(markerId)) return group
 
   const slotIndex = group.orderedIds.indexOf(markerId)
   const slot = group.slots[slotIndex] ?? { column: 0, row: 0 }
+  const horizontalSpacing = getGroupSpacingPercent(groupSpacing, stageSize, "x")
+  const verticalSpacing = getGroupSpacingPercent(groupSpacing, stageSize, "y")
 
   return {
     ...group,
     anchor: {
-      x: markerBlock.x - slot.column * (blockSize.width + groupSpacing),
-      y: markerBlock.y - slot.row * (blockSize.height + groupSpacing),
+      x: markerBlock.x - slot.column * (blockSize.width + horizontalSpacing),
+      y: markerBlock.y - slot.row * (blockSize.height + verticalSpacing),
     },
   }
 }

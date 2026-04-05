@@ -1,5 +1,6 @@
 import { MIN_BLOCK_SIZE, MIN_GROUP_SPACING } from "../../constants"
 import { blockSizeFromPixels, hasStageSize } from "../../utils/blockSize"
+import { getGroupSpacingPixels } from "../../utils/groupSpacing"
 import { clamp } from "../../utils/math"
 import { getPercentPoint } from "../../utils/points"
 import { applyGroupLayouts, getGroupAdjustedForResizedMarker } from "./groupLayouts"
@@ -64,14 +65,15 @@ export function createDragHandlers({
           resizeState.markerId,
           marker.block,
           nextBlockSize,
-          groupSpacing
+          groupSpacing,
+          stageSize
         )
       )
 
       setBlockSize(nextBlockSize)
       if (groups.length > 0) {
         setGroups(resizedGroups)
-        setMarkers((current) => applyGroupLayouts(current, resizedGroups, nextBlockSize, groupSpacing))
+        setMarkers((current) => applyGroupLayouts(current, resizedGroups, nextBlockSize, groupSpacing, stageSize))
       }
       return
     }
@@ -95,7 +97,7 @@ export function createDragHandlers({
         )
 
         setGroups(nextGroups)
-        setMarkers((current) => applyGroupLayouts(current, nextGroups, blockSize, groupSpacing))
+        setMarkers((current) => applyGroupLayouts(current, nextGroups, blockSize, groupSpacing, stageSize))
       } else {
         setMarkers((current) =>
           current.map((marker) =>
@@ -115,15 +117,26 @@ export function createDragHandlers({
     }
 
     if (spacingDragState) {
-      const delta =
+      const deltaPixels =
         spacingDragState.axis === "x"
-          ? ((event.clientX - spacingDragState.startClientX) / event.currentTarget.getBoundingClientRect().width) * 100
-          : ((event.clientY - spacingDragState.startClientY) / event.currentTarget.getBoundingClientRect().height) * 100
-      const nextSpacing = clamp(spacingDragState.startSpacing + delta * 2, MIN_GROUP_SPACING, 100)
+          ? event.clientX - spacingDragState.startClientX
+          : event.clientY - spacingDragState.startClientY
+      const referenceSize = hasStageSize(stageSize)
+        ? Math.min(stageSize.width, stageSize.height)
+        : Math.min(
+            event.currentTarget.getBoundingClientRect().width,
+            event.currentTarget.getBoundingClientRect().height
+          )
+      const startSpacingPixels = getGroupSpacingPixels(spacingDragState.startSpacing, stageSize)
+      const nextSpacing = clamp(
+        ((startSpacingPixels + deltaPixels * 2) / Math.max(referenceSize, 1)) * 100,
+        MIN_GROUP_SPACING,
+        100
+      )
 
       setGroupSpacing(nextSpacing)
       if (groups.length > 0) {
-        setMarkers((current) => applyGroupLayouts(current, groups, blockSize, nextSpacing))
+        setMarkers((current) => applyGroupLayouts(current, groups, blockSize, nextSpacing, stageSize))
       }
       return
     }

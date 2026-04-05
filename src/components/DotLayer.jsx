@@ -82,6 +82,7 @@ export function DotLayer({
             top: `${marker.block.y}%`,
             width: `${blockSize.width}%`,
             height: `${blockSize.height}%`,
+            boxSizing: "border-box",
             transform: "translate(-50%, -50%)",
             border: `1.5px solid ${accentColor}`,
             background: blockBackground,

@@ -7,7 +7,7 @@ import {
   savePersistedAnnotationState,
 } from "../utils/browserStorage"
 import { createDragHandlers } from "./linkedMapState/dragHandlers"
-import { flattenGroupedMarkerIds } from "./linkedMapState/groupLayouts"
+import { applyGroupLayouts, flattenGroupedMarkerIds } from "./linkedMapState/groupLayouts"
 import { createAnnotationModeActions } from "./linkedMapState/interactionModes"
 import { createAnnotationResetters } from "./linkedMapState/annotationResets"
 import { createPersistenceActions } from "./linkedMapState/persistence"
@@ -112,6 +112,12 @@ export function useLinkedMapState() {
   }, [stageSize.height, stageSize.width])
 
   useEffect(() => {
+    if (groups.length === 0 || !stageSize.width || !stageSize.height) return
+
+    setMarkers((current) => applyGroupLayouts(current, groups, blockSize, groupSpacing, stageSize))
+  }, [blockSize, groupSpacing, groups, stageSize.height, stageSize.width])
+
+  useEffect(() => {
     if (!hasLoadedPersistedStateRef.current) return
     if (skipNextPersistenceRef.current) {
       skipNextPersistenceRef.current = false
@@ -153,6 +159,7 @@ export function useLinkedMapState() {
     groups,
     hoveredMarkerId,
     markers,
+    stageSize,
     setActiveMarkerId,
     setDragBlockState,
     setDragCurrent,
@@ -181,6 +188,7 @@ export function useLinkedMapState() {
     pendingPoint,
     resizeState,
     selectMode,
+    stageSize,
     setActiveMarkerId,
     setDragBlockState,
     setDragCurrent,

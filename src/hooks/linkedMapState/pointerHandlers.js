@@ -19,6 +19,7 @@ export function createPointerHandlers({
   pendingPoint,
   resizeState,
   selectMode,
+  stageSize,
   setActiveMarkerId,
   setDragBlockState,
   setDragCurrent,
@@ -97,7 +98,7 @@ export function createPointerHandlers({
         const remainingGroups = groups.filter(
           (group) => !group.orderedIds.some((markerId) => expandedSelectedBlockIds.includes(markerId))
         )
-        const nextGroup = createGroupLayout(markers, expandedSelectedBlockIds, blockSize, groupSpacing)
+        const nextGroup = createGroupLayout(markers, expandedSelectedBlockIds, blockSize, groupSpacing, stageSize)
 
         if (nextGroup) {
           const createdGroup = {
@@ -107,7 +108,7 @@ export function createPointerHandlers({
           const nextGroups = [...remainingGroups, createdGroup]
           setGroups(nextGroups)
           setSpacingDragState(null)
-          setMarkers((current) => applyGroupLayouts(current, nextGroups, blockSize, groupSpacing))
+          setMarkers((current) => applyGroupLayouts(current, nextGroups, blockSize, groupSpacing, stageSize))
           setActiveMarkerId(null)
         }
       }
@@ -142,7 +143,8 @@ export function createPointerHandlers({
         restored.markers,
         restored.groups ?? [],
         restored.blockSize,
-        restored.groupSpacing ?? DEFAULT_GROUP_SPACING
+        restored.groupSpacing ?? DEFAULT_GROUP_SPACING,
+        stageSize
       )
     )
     setBlockSize(restored.blockSize)
