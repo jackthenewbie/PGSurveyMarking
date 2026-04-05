@@ -5,6 +5,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true, // or '0.0.0.0'
-    allowedHosts: ['marking.decoyer.win'],
+    allowedHosts: ['marking.decoyer.win', 'marking-live.decoyer.win'],
   },
 })

@@ -4,19 +4,23 @@ import { PendingDot } from "./PendingDot";
 import { SelectionRect } from "./SelectionRect";
 
 export function AnnotationOverlay({
+  activeMarkerId,
+  blockSize,
   dragCurrent,
   dragStart,
-  hoveredPairId,
-  pairs,
+  hoveredMarkerId,
+  markers,
   paths,
   pendingPoint,
   selectMode,
   stageSize,
   zoomScale,
-  onHoverPair,
+  onActivateMarker,
+  onHoverMarker,
   onMouseDown,
   onMouseMove,
   onMouseUp,
+  onResizeStart,
   onStageClick,
   onWheel,
 }) {
@@ -36,12 +40,16 @@ export function AnnotationOverlay({
     >
       <PathOverlay paths={paths} stageSize={stageSize} />
       <DotLayer
-        hoveredPairId={hoveredPairId}
-        pairs={pairs}
-        onHoverPair={onHoverPair}
+        activeMarkerId={activeMarkerId}
+        blockSize={blockSize}
+        hoveredMarkerId={hoveredMarkerId}
+        markers={markers}
+        onActivateMarker={onActivateMarker}
+        onHoverMarker={onHoverMarker}
+        onResizeStart={onResizeStart}
         zoomScale={zoomScale}
       />
-      <PendingDot point={pendingPoint} zoomScale={zoomScale} />
+      <PendingDot blockSize={blockSize} point={pendingPoint} />
       {selectMode && <SelectionRect dragCurrent={dragCurrent} dragStart={dragStart} />}
     </div>
   );

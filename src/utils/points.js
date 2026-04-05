@@ -8,20 +8,18 @@ export function getPercentPoint(event) {
   };
 }
 
-export function collectSelectedDots(pairs, bounds) {
+export function collectSelectedDots(markers, bounds) {
   const selected = [];
 
-  pairs.forEach((pair) => {
-    pair.dots.forEach((dot) => {
-      if (
-        dot.x >= bounds.minX &&
-        dot.x <= bounds.maxX &&
-        dot.y >= bounds.minY &&
-        dot.y <= bounds.maxY
-      ) {
-        selected.push({ id: dot.id, x: dot.x, y: dot.y });
-      }
-    });
+  markers.forEach((marker) => {
+    if (
+      marker.dot.x >= bounds.minX &&
+      marker.dot.x <= bounds.maxX &&
+      marker.dot.y >= bounds.minY &&
+      marker.dot.y <= bounds.maxY
+    ) {
+      selected.push({ id: marker.id, x: marker.dot.x, y: marker.dot.y });
+    }
   });
 
   return selected;

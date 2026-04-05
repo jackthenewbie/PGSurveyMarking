@@ -54,7 +54,7 @@ export default function LinkedMapMarkerSite() {
       ) : (
         <>
           <Toolbar
-            hasCoordinates={state.pairs.length > 0}
+            hasCoordinates={state.markers.length > 0}
             hasPaths={state.paths.length > 0}
             mode={state.mode}
             selectMode={state.selectMode}
@@ -69,19 +69,23 @@ export default function LinkedMapMarkerSite() {
             onToggleSelectMode={state.toggleSelectMode}
           />
           <MapStage
+            activeMarkerId={state.activeMarkerId}
+            blockSize={state.blockSize}
             dragCurrent={state.dragCurrent}
             dragStart={state.dragStart}
-            hoveredPairId={state.hoveredPairId}
+            hoveredMarkerId={state.hoveredMarkerId}
             mediaSource={state.mediaSource}
-            pairs={state.pairs}
+            markers={state.markers}
             paths={state.paths}
             pendingPoint={state.pendingPoint}
             selectMode={state.selectMode}
             stageSize={state.stageSize}
             zoomOrigin={state.zoomOrigin}
             zoomScale={state.zoomScale}
+            onActivateMarker={state.setActiveMarkerId}
+            onResizeStart={state.handleResizeStart}
             onSurfaceReady={state.updateSurfaceSize}
-            onHoverPair={state.setHoveredPairId}
+            onHoverMarker={state.setHoveredMarkerId}
             onMouseDown={state.handleMouseDown}
             onMouseMove={state.handleMouseMove}
             onMouseUp={state.handleMouseUp}

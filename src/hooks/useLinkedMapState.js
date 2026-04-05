@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { collectSelectedDots, getPercentPoint } from "../utils/points";
 import { parseCoordinatePairsBackup, serializeCoordinatePairs } from "../utils/backup";
-import { MAX_ZOOM_SCALE, MIN_ZOOM_SCALE, ZOOM_STEP } from "../constants";
+import {
+  DEFAULT_BLOCK_SIZE,
+  MAX_ZOOM_SCALE,
+  MIN_BLOCK_SIZE,
+  MIN_ZOOM_SCALE,
+  ZOOM_STEP,
+} from "../constants";
 import { clamp } from "../utils/math";
 import { shortestOpenPath } from "../utils/pathing";
 import { useViewport } from "./useViewport";
@@ -10,29 +16,31 @@ const DEFAULT_MODE = "screenshot";
 const DEFAULT_SURFACE_SIZE = { width: 0, height: 0 };
 const DEFAULT_ZOOM_ORIGIN = { x: 50, y: 50 };
 
-function renumberPairs(pairs) {
-  return pairs.map((pair, index) => ({ ...pair, id: index + 1 }));
+function renumberMarkers(markers) {
+  return markers.map((marker, index) => ({ ...marker, id: index + 1 }));
 }
 
 export function useLinkedMapState() {
   const blobRef = useRef(null);
   const streamRef = useRef(null);
   const sourceRequestIdRef = useRef(0);
-  const nextDotIdRef = useRef(1);
   const nextPathIdRef = useRef(1);
   const viewport = useViewport();
   const [mode, setMode] = useState(DEFAULT_MODE);
   const [mediaSource, setMediaSource] = useState(null);
   const [surfaceSize, setSurfaceSize] = useState(DEFAULT_SURFACE_SIZE);
   const [pendingPoint, setPendingPoint] = useState(null);
-  const [pairs, setPairs] = useState([]);
-  const [hoveredPairId, setHoveredPairId] = useState(null);
+  const [markers, setMarkers] = useState([]);
+  const [hoveredMarkerId, setHoveredMarkerId] = useState(null);
+  const [activeMarkerId, setActiveMarkerId] = useState(null);
   const [selectMode, setSelectMode] = useState(false);
   const [dragStart, setDragStart] = useState(null);
   const [dragCurrent, setDragCurrent] = useState(null);
   const [paths, setPaths] = useState([]);
   const [zoomScale, setZoomScale] = useState(MIN_ZOOM_SCALE);
   const [zoomOrigin, setZoomOrigin] = useState(DEFAULT_ZOOM_ORIGIN);
+  const [blockSize, setBlockSize] = useState(DEFAULT_BLOCK_SIZE);
+  const [resizeState, setResizeState] = useState(null);
 
   useEffect(() => {
     return () => {
@@ -57,22 +65,24 @@ export function useLinkedMapState() {
         setPendingPoint(null);
         setDragStart(null);
         setDragCurrent(null);
+        setResizeState(null);
+        setActiveMarkerId(null);
       }
-      if (event.key.toLowerCase() === "d" && hoveredPairId != null) {
-        setPairs((current) => renumberPairs(current.filter((pair) => pair.id !== hoveredPairId)));
-        setHoveredPairId(null);
+
+      if (event.key.toLowerCase() === "d" && hoveredMarkerId != null) {
+        setMarkers((current) => renumberMarkers(current.filter((marker) => marker.id !== hoveredMarkerId)));
+        setHoveredMarkerId(null);
+        setActiveMarkerId(null);
       }
     };
+
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [hoveredPairId]);
+  }, [hoveredMarkerId]);
 
   const stageSize = useMemo(() => {
     if (!surfaceSize.width || !surfaceSize.height) return DEFAULT_SURFACE_SIZE;
-    const scale = Math.min(
-      viewport.width / surfaceSize.width,
-      viewport.height / surfaceSize.height
-    );
+    const scale = Math.min(viewport.width / surfaceSize.width, viewport.height / surfaceSize.height);
     return {
       width: Math.round(surfaceSize.width * scale),
       height: Math.round(surfaceSize.height * scale),
@@ -80,16 +90,18 @@ export function useLinkedMapState() {
   }, [surfaceSize, viewport]);
 
   function resetAnnotationState() {
-    setPairs([]);
+    setMarkers([]);
     setPendingPoint(null);
-    setHoveredPairId(null);
+    setHoveredMarkerId(null);
+    setActiveMarkerId(null);
     setSelectMode(false);
     setDragStart(null);
     setDragCurrent(null);
     setPaths([]);
     setZoomScale(MIN_ZOOM_SCALE);
     setZoomOrigin(DEFAULT_ZOOM_ORIGIN);
-    nextDotIdRef.current = 1;
+    setBlockSize(DEFAULT_BLOCK_SIZE);
+    setResizeState(null);
     nextPathIdRef.current = 1;
   }
 
@@ -206,12 +218,28 @@ export function useLinkedMapState() {
   }
 
   function handleStageClick(event) {
-    if (selectMode) return;
+    if (selectMode || resizeState) return;
+
     const { x, y } = getPercentPoint(event);
-    if (!pendingPoint) return setPendingPoint({ id: nextDotIdRef.current++, x, y });
-    const dot1 = pendingPoint;
-    const dot2 = { id: nextDotIdRef.current++, x, y };
-    setPairs((current) => [...current, { id: current.length + 1, dots: [dot1, dot2] }]);
+
+    if (activeMarkerId != null && !pendingPoint) {
+      setActiveMarkerId(null);
+      return;
+    }
+
+    if (!pendingPoint) {
+      setPendingPoint({ x, y });
+      return;
+    }
+
+    setMarkers((current) => [
+      ...current,
+      {
+        id: current.length + 1,
+        block: pendingPoint,
+        dot: { x, y },
+      },
+    ]);
     setPendingPoint(null);
   }
 
@@ -224,24 +252,42 @@ export function useLinkedMapState() {
   }
 
   function handleMouseMove(event) {
+    if (resizeState) {
+      const marker = markers.find((current) => current.id === resizeState.markerId);
+      if (!marker) return;
+
+      const point = getPercentPoint(event);
+      setBlockSize((current) => ({
+        width: resizeState.affectsX
+          ? clamp(Math.abs(point.x - marker.block.x) * 2, MIN_BLOCK_SIZE.width, 100)
+          : current.width,
+        height: resizeState.affectsY
+          ? clamp(Math.abs(point.y - marker.block.y) * 2, MIN_BLOCK_SIZE.height, 100)
+          : current.height,
+      }));
+      return;
+    }
+
     if (!selectMode || !dragStart) return;
     setDragCurrent(getPercentPoint(event));
   }
 
   function handleMouseUp() {
+    if (resizeState) {
+      setResizeState(null);
+      return;
+    }
+
     if (!selectMode || !dragStart || !dragCurrent) return;
     const minX = Math.min(dragStart.x, dragCurrent.x);
     const maxX = Math.max(dragStart.x, dragCurrent.x);
     const minY = Math.min(dragStart.y, dragCurrent.y);
     const maxY = Math.max(dragStart.y, dragCurrent.y);
-    const selected = collectSelectedDots(pairs, { minX, maxX, minY, maxY });
+    const selected = collectSelectedDots(markers, { minX, maxX, minY, maxY });
 
     if (selected.length >= 2) {
       const pathId = nextPathIdRef.current++;
-      setPaths((current) => [
-        ...current,
-        { id: pathId, dots: shortestOpenPath(selected) },
-      ]);
+      setPaths((current) => [...current, { id: pathId, dots: shortestOpenPath(selected) }]);
     }
 
     setDragStart(null);
@@ -253,22 +299,28 @@ export function useLinkedMapState() {
     setDragStart(null);
     setDragCurrent(null);
     setPendingPoint(null);
+    setActiveMarkerId(null);
+    setResizeState(null);
   }
 
   function clearTransientState() {
     setPendingPoint(null);
-    setHoveredPairId(null);
+    setHoveredMarkerId(null);
+    setActiveMarkerId(null);
     setDragStart(null);
     setDragCurrent(null);
     setPaths([]);
+    setResizeState(null);
   }
 
   function clearCoordinates() {
-    setPairs([]);
+    setMarkers([]);
     setPendingPoint(null);
-    setHoveredPairId(null);
+    setHoveredMarkerId(null);
+    setActiveMarkerId(null);
     setDragStart(null);
     setDragCurrent(null);
+    setResizeState(null);
   }
 
   function clearCoordinatesAndPaths() {
@@ -287,7 +339,7 @@ export function useLinkedMapState() {
   }
 
   function downloadCoordinates() {
-    const blob = new Blob([serializeCoordinatePairs(pairs)], {
+    const blob = new Blob([serializeCoordinatePairs(markers, blockSize)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
@@ -299,43 +351,60 @@ export function useLinkedMapState() {
   }
 
   function restoreCoordinates(text) {
-    const restoredPairs = parseCoordinatePairsBackup(text);
+    const restored = parseCoordinatePairsBackup(text);
     clearTransientState();
-    setPairs(restoredPairs);
+    setMarkers(restored.markers);
+    setBlockSize(restored.blockSize);
     nextPathIdRef.current = 1;
-    nextDotIdRef.current =
-      restoredPairs.reduce((maxId, pair) => Math.max(maxId, ...pair.dots.map((dot) => dot.id)), 0) +
-      1;
+  }
+
+  function activateMarker(markerId) {
+    setPendingPoint(null);
+    setActiveMarkerId(markerId);
+  }
+
+  function handleResizeStart(markerId, handle) {
+    setPendingPoint(null);
+    setActiveMarkerId(markerId);
+    setResizeState({
+      markerId,
+      affectsX: handle.includes("e") || handle.includes("w"),
+      affectsY: handle.includes("n") || handle.includes("s"),
+    });
   }
 
   return {
-    dragCurrent,
-    dragStart,
+    activeMarkerId,
+    blockSize,
+    clearCoordinates,
+    clearCoordinatesAndPaths,
+    clearPaths: () => setPaths([]),
     changeMode,
     downloadCoordinates,
+    dragCurrent,
+    dragStart,
     handleFileChange,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
+    handleResizeStart,
     handleStageClick,
     handleStageWheel,
-    hoveredPairId,
     hasSource: mediaSource != null,
+    hoveredMarkerId,
+    markers,
     mediaSource,
     mode,
-    pairs,
     paths,
     pendingPoint,
+    restoreCoordinates,
     selectMode,
-    setHoveredPairId,
-    startScreenShare,
+    setActiveMarkerId: activateMarker,
+    setHoveredMarkerId,
     stageSize,
+    startScreenShare,
     toggleSelectMode,
     updateSurfaceSize,
-    clearCoordinates,
-    clearCoordinatesAndPaths,
-    clearPaths: () => setPaths([]),
-    restoreCoordinates,
     zoomOrigin,
     zoomScale,
   };

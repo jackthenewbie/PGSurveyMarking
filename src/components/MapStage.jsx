@@ -2,19 +2,23 @@ import { AnnotationOverlay } from "./AnnotationOverlay";
 import { MediaSurface } from "./MediaSurface";
 
 export function MapStage({
+  activeMarkerId,
+  blockSize,
   dragCurrent,
   dragStart,
-  hoveredPairId,
+  hoveredMarkerId,
   mediaSource,
-  pairs,
+  markers,
   paths,
   pendingPoint,
   selectMode,
   stageSize,
   zoomOrigin,
   zoomScale,
+  onActivateMarker,
+  onResizeStart,
   onSurfaceReady,
-  onHoverPair,
+  onHoverMarker,
   onMouseDown,
   onMouseMove,
   onMouseUp,
@@ -51,19 +55,23 @@ export function MapStage({
         >
           <MediaSurface media={mediaSource} onSurfaceReady={onSurfaceReady} />
           <AnnotationOverlay
+            activeMarkerId={activeMarkerId}
+            blockSize={blockSize}
             dragCurrent={dragCurrent}
             dragStart={dragStart}
-            hoveredPairId={hoveredPairId}
-            pairs={pairs}
+            hoveredMarkerId={hoveredMarkerId}
+            markers={markers}
             paths={paths}
             pendingPoint={pendingPoint}
             selectMode={selectMode}
             stageSize={stageSize}
             zoomScale={zoomScale}
-            onHoverPair={onHoverPair}
+            onActivateMarker={onActivateMarker}
+            onHoverMarker={onHoverMarker}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
+            onResizeStart={onResizeStart}
             onStageClick={onStageClick}
             onWheel={onWheel}
           />

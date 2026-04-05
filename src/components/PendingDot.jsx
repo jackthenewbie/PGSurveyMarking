@@ -1,6 +1,4 @@
-import { DOT_SIZE } from "../constants";
-
-export function PendingDot({ point, zoomScale }) {
+export function PendingDot({ blockSize, point }) {
   if (!point) return null;
 
   return (
@@ -9,13 +7,12 @@ export function PendingDot({ point, zoomScale }) {
         position: "absolute",
         left: `${point.x}%`,
         top: `${point.y}%`,
-        width: `${DOT_SIZE}px`,
-        height: `${DOT_SIZE}px`,
-        transform: `translate(-50%, -50%) scale(${1 / zoomScale})`,
+        width: `${blockSize.width}%`,
+        height: `${blockSize.height}%`,
+        transform: "translate(-50%, -50%)",
         transformOrigin: "center",
-        borderRadius: "9999px",
-        border: "1px solid white",
-        background: "orange",
+        border: "1.5px dashed orange",
+        background: "rgba(255,165,0,0.12)",
         zIndex: 10,
         pointerEvents: "none",
       }}
