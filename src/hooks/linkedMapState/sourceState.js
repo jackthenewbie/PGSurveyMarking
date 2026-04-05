@@ -86,8 +86,6 @@ export function useLinkedMapSource({ clearSavedAnnotationState, resetAnnotationS
       }
 
       disposeCurrentMedia()
-      clearSavedAnnotationState()
-      resetAnnotationState()
       blobRef.current = url
       setMode("screenshot")
       setMediaSource({ kind: "image", src: url })
@@ -136,8 +134,6 @@ export function useLinkedMapSource({ clearSavedAnnotationState, resetAnnotationS
     }
 
     const settings = videoTrack.getSettings()
-    clearSavedAnnotationState()
-    resetAnnotationState()
     setMode("stream")
     setMediaSource({ kind: "stream", stream })
     setSurfaceSize({
