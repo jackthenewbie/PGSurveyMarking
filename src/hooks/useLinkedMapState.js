@@ -16,11 +16,52 @@ import { DEFAULT_SURFACE_SIZE, useLinkedMapSource } from "./linkedMapState/sourc
 import { useKeyboardShortcuts } from "./linkedMapState/useKeyboardShortcuts"
 import { useViewport } from "./useViewport"
 
+function clonePoint(point) {
+  return point ? { ...point } : point
+}
+
+function cloneMarker(marker) {
+  return {
+    ...marker,
+    block: clonePoint(marker.block),
+    dot: clonePoint(marker.dot),
+  }
+}
+
+function cloneGroup(group) {
+  return {
+    ...group,
+    anchor: clonePoint(group.anchor),
+    orderedIds: [...group.orderedIds],
+  }
+}
+
+function createAnnotationSnapshot({ blockSize, groupSpacing, groups, markers, paths }) {
+  return {
+    blockSize: { ...blockSize },
+    groupSpacing,
+    groups: groups.map(cloneGroup),
+    markers: markers.map(cloneMarker),
+    paths: paths.map((path) => ({
+      ...path,
+      dots: path.dots.map(clonePoint),
+    })),
+  }
+}
+
+function areSnapshotsEqual(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
 export function useLinkedMapState() {
   const nextPathIdRef = useRef(1)
   const nextGroupIdRef = useRef(1)
   const hasLoadedPersistedStateRef = useRef(false)
   const skipNextPersistenceRef = useRef(true)
+  const annotationSnapshotRef = useRef(null)
+  const undoStackRef = useRef([])
+  const redoStackRef = useRef([])
+  const gestureStartSnapshotRef = useRef(null)
   const viewport = useViewport()
 
   const [pendingPoint, setPendingPoint] = useState(null)
@@ -42,6 +83,77 @@ export function useLinkedMapState() {
   const [resizeState, setResizeState] = useState(null)
   const [spacingDragState, setSpacingDragState] = useState(null)
   const [dragBlockState, setDragBlockState] = useState(null)
+
+  const applyAnnotationSnapshot = (snapshot) => {
+    cancelGesture()
+    resetters.clearTransientState()
+    setMarkers(snapshot.markers.map(cloneMarker))
+    setGroups(snapshot.groups.map(cloneGroup))
+    setPaths(
+      snapshot.paths.map((path) => ({
+        ...path,
+        dots: path.dots.map(clonePoint),
+      }))
+    )
+    setBlockSize({ ...snapshot.blockSize })
+    setGroupSpacing(snapshot.groupSpacing)
+    nextPathIdRef.current = snapshot.paths.reduce((maxPathId, path) => Math.max(maxPathId, path.id ?? 0), 0) + 1
+    nextGroupIdRef.current =
+      snapshot.groups.reduce((maxGroupId, group) => Math.max(maxGroupId, group.id ?? 0), 0) + 1
+  }
+
+  const clearHistory = () => {
+    undoStackRef.current = []
+    redoStackRef.current = []
+    gestureStartSnapshotRef.current = null
+  }
+
+  const cancelGesture = () => {
+    gestureStartSnapshotRef.current = null
+  }
+
+  const pushUndoSnapshot = (snapshot) => {
+    undoStackRef.current = [...undoStackRef.current, snapshot]
+    redoStackRef.current = []
+  }
+
+  const captureGestureStart = () => {
+    if (gestureStartSnapshotRef.current || !annotationSnapshotRef.current) return
+    gestureStartSnapshotRef.current = createAnnotationSnapshot(annotationSnapshotRef.current)
+  }
+
+  const finishGesture = () => {
+    const startSnapshot = gestureStartSnapshotRef.current
+    gestureStartSnapshotRef.current = null
+    if (!startSnapshot || !annotationSnapshotRef.current) return
+
+    const currentSnapshot = createAnnotationSnapshot(annotationSnapshotRef.current)
+    if (areSnapshotsEqual(startSnapshot, currentSnapshot)) return
+    pushUndoSnapshot(startSnapshot)
+  }
+
+  const undo = () => {
+    const previousSnapshot = undoStackRef.current.at(-1)
+    if (!previousSnapshot || !annotationSnapshotRef.current) return
+
+    const currentSnapshot = createAnnotationSnapshot(annotationSnapshotRef.current)
+    cancelGesture()
+    undoStackRef.current = undoStackRef.current.slice(0, -1)
+    redoStackRef.current = [...redoStackRef.current, currentSnapshot]
+    applyAnnotationSnapshot(previousSnapshot)
+  }
+
+  const redo = () => {
+    const nextSnapshot = redoStackRef.current.at(-1)
+    if (!nextSnapshot || !annotationSnapshotRef.current) return
+
+    const currentSnapshot = createAnnotationSnapshot(annotationSnapshotRef.current)
+    cancelGesture()
+    redoStackRef.current = redoStackRef.current.slice(0, -1)
+    undoStackRef.current = [...undoStackRef.current, currentSnapshot]
+    applyAnnotationSnapshot(nextSnapshot)
+  }
+
   const resetters = createAnnotationResetters({
     nextGroupIdRef,
     nextPathIdRef,
@@ -63,9 +175,13 @@ export function useLinkedMapState() {
     setZoomOrigin,
     setZoomScale,
   })
+  const resetAnnotationStateAndHistory = () => {
+    clearHistory()
+    resetters.resetAnnotationState()
+  }
   const source = useLinkedMapSource({
     clearSavedAnnotationState: clearPersistedAnnotationState,
-    resetAnnotationState: resetters.resetAnnotationState,
+    resetAnnotationState: resetAnnotationStateAndHistory,
   })
   const stageSize = useMemo(() => {
     if (!source.surfaceSize.width || !source.surfaceSize.height) return DEFAULT_SURFACE_SIZE
@@ -133,7 +249,18 @@ export function useLinkedMapState() {
     })
   }, [blockSize, groupSpacing, groups, markers, paths])
 
+  useEffect(() => {
+    annotationSnapshotRef.current = {
+      blockSize,
+      groupSpacing,
+      groups,
+      markers,
+      paths,
+    }
+  }, [blockSize, groupSpacing, groups, markers, paths])
+
   const modeActions = createAnnotationModeActions({
+    captureGestureStart,
     groupingMode,
     groupSpacing,
     groups,
@@ -155,10 +282,19 @@ export function useLinkedMapState() {
   useKeyboardShortcuts({
     activeMarkerId,
     blockSize,
+    cancelGesture,
+    canRedo: redoStackRef.current.length > 0,
+    canUndo: undoStackRef.current.length > 0,
     groupSpacing,
     groups,
     hoveredMarkerId,
     markers,
+    onRedo: redo,
+    onUndo: undo,
+    pushHistorySnapshot: () => {
+      if (!annotationSnapshotRef.current) return
+      pushUndoSnapshot(createAnnotationSnapshot(annotationSnapshotRef.current))
+    },
     stageSize,
     setActiveMarkerId,
     setDragBlockState,
@@ -179,6 +315,7 @@ export function useLinkedMapState() {
     dragBlockState,
     dragCurrent,
     dragStart,
+    finishGesture,
     groupSpacing,
     groupingMode,
     groups,
@@ -202,6 +339,10 @@ export function useLinkedMapState() {
     setZoomOrigin,
     setZoomScale,
     spacingDragState,
+    pushHistorySnapshot: () => {
+      if (!annotationSnapshotRef.current) return
+      pushUndoSnapshot(createAnnotationSnapshot(annotationSnapshotRef.current))
+    },
   })
   const dragHandlers = createDragHandlers({
     blockSize,
@@ -232,14 +373,50 @@ export function useLinkedMapState() {
     setGroups,
     restoreRestoredMarkers: pointerHandlers.restoreRestoredMarkers,
   })
+
+  const clearCoordinates = () => {
+    if (markers.length === 0 && groups.length === 0) return
+    cancelGesture()
+    pushUndoSnapshot(createAnnotationSnapshot(annotationSnapshotRef.current))
+    resetters.clearCoordinates()
+  }
+
+  const clearCoordinatesAndPaths = () => {
+    if (markers.length === 0 && groups.length === 0 && paths.length === 0) return
+    cancelGesture()
+    pushUndoSnapshot(createAnnotationSnapshot(annotationSnapshotRef.current))
+    resetters.clearCoordinatesAndPaths()
+  }
+
+  const clearGroups = () => {
+    if (groups.length === 0) return
+    cancelGesture()
+    pushUndoSnapshot(createAnnotationSnapshot(annotationSnapshotRef.current))
+    modeActions.clearGroups()
+  }
+
+  const clearPaths = () => {
+    if (paths.length === 0) return
+    cancelGesture()
+    pushUndoSnapshot(createAnnotationSnapshot(annotationSnapshotRef.current))
+    setPaths([])
+  }
+
+  const restoreCoordinates = (text) => {
+    const snapshotBeforeRestore = createAnnotationSnapshot(annotationSnapshotRef.current)
+    cancelGesture()
+    persistenceActions.restoreCoordinates(text)
+    pushUndoSnapshot(snapshotBeforeRestore)
+  }
+
   return {
     activeMarkerId,
     blockSize,
     changeMode: source.changeMode,
-    clearCoordinates: resetters.clearCoordinates,
-    clearCoordinatesAndPaths: resetters.clearCoordinatesAndPaths,
-    clearGroups: modeActions.clearGroups,
-    clearPaths: () => setPaths([]),
+    clearCoordinates,
+    clearCoordinatesAndPaths,
+    clearGroups,
+    clearPaths,
     downloadCoordinates: persistenceActions.downloadCoordinates,
     dragCurrent,
     dragStart,
@@ -261,7 +438,7 @@ export function useLinkedMapState() {
     mode: source.mode,
     paths,
     pendingPoint,
-    restoreCoordinates: persistenceActions.restoreCoordinates,
+    restoreCoordinates,
     selectMode,
     setActiveMarkerId: modeActions.setActiveMarkerId,
     setHoveredMarkerId,

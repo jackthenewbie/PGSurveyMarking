@@ -1,4 +1,5 @@
 export function createAnnotationModeActions({
+  captureGestureStart,
   groupingMode,
   groupSpacing,
   groups,
@@ -49,6 +50,7 @@ export function createAnnotationModeActions({
     setPendingPoint(null)
     setActiveMarkerId(markerId)
     setDragBlockState(null)
+    captureGestureStart()
     setResizeState({
       markerId,
       affectsX: handle.includes("e") || handle.includes("w"),
@@ -61,6 +63,7 @@ export function createAnnotationModeActions({
     setPendingPoint(null)
     setActiveMarkerId(null)
     setDragBlockState(null)
+    captureGestureStart()
     setSpacingDragState({
       axis,
       startClientX: startPoint.clientX,
@@ -87,6 +90,7 @@ export function createAnnotationModeActions({
     setActiveMarkerId(markerId)
     setResizeState(null)
     setSpacingDragState(null)
+    captureGestureStart()
     setDragBlockState(
       containingGroup
         ? {

@@ -10,6 +10,7 @@ export function createPointerHandlers({
   dragBlockState,
   dragCurrent,
   dragStart,
+  finishGesture,
   groupSpacing,
   groupingMode,
   groups,
@@ -33,6 +34,7 @@ export function createPointerHandlers({
   setZoomOrigin,
   setZoomScale,
   spacingDragState,
+  pushHistorySnapshot,
 }) {
   function handleStageClick(event) {
     if (selectMode || groupingMode || resizeState || spacingDragState) return
@@ -49,6 +51,7 @@ export function createPointerHandlers({
       return
     }
 
+    pushHistorySnapshot()
     setMarkers((current) => [
       ...current,
       {
@@ -70,16 +73,19 @@ export function createPointerHandlers({
 
   function handleMouseUp() {
     if (resizeState) {
+      finishGesture()
       setResizeState(null)
       return
     }
 
     if (dragBlockState) {
+      finishGesture()
       setDragBlockState(null)
       return
     }
 
     if (spacingDragState) {
+      finishGesture()
       setSpacingDragState(null)
       return
     }
@@ -101,6 +107,7 @@ export function createPointerHandlers({
         const nextGroup = createGroupLayout(markers, expandedSelectedBlockIds, blockSize, groupSpacing, stageSize)
 
         if (nextGroup) {
+          pushHistorySnapshot()
           const createdGroup = {
             ...nextGroup,
             id: nextGroupIdRef.current++,
@@ -117,6 +124,7 @@ export function createPointerHandlers({
       const selected = collectSelectedDots(markers, { minX, maxX, minY, maxY })
 
       if (selected.length >= 2) {
+        pushHistorySnapshot()
         const pathId = nextPathIdRef.current++
         setPaths((current) => [...current, { id: pathId, dots: shortestOpenPath(selected) }])
       }

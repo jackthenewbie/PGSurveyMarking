@@ -2,6 +2,8 @@ import { useEffect } from "react"
 import { remapGroups, renumberMarkers } from "./groupLayouts"
 
 export const KEYBOARD_SHORTCUTS = [
+  { key: "Ctrl/Cmd+Z", description: "Undo the last saved coordinate action." },
+  { key: "Shift+Z", description: "Redo the last undone coordinate action." },
   { key: "Esc", description: "Clear active drag, resize, spacing drag, pending point, and active marker." },
   { key: "D", description: "Delete the hovered marker and renumber the remaining markers." },
   { key: "G", description: "Toggle grouping mode on or off." },
@@ -19,10 +21,16 @@ function isGroupedMarker(markerId, groups) {
 export function useKeyboardShortcuts({
   activeMarkerId,
   blockSize,
+  cancelGesture,
+  canRedo,
+  canUndo,
   groupSpacing,
   groups,
   hoveredMarkerId,
   markers,
+  onRedo,
+  onUndo,
+  pushHistorySnapshot,
   stageSize,
   setActiveMarkerId,
   setDragBlockState,
@@ -41,7 +49,24 @@ export function useKeyboardShortcuts({
     const onKeyDown = (event) => {
       const key = event.key.toLowerCase()
 
+      if ((event.ctrlKey || event.metaKey) && key === "z" && !event.shiftKey) {
+        if (canUndo) {
+          event.preventDefault()
+          onUndo()
+        }
+        return
+      }
+
+      if (key === "z" && event.shiftKey && !event.altKey) {
+        if (canRedo) {
+          event.preventDefault()
+          onRedo()
+        }
+        return
+      }
+
       if (key === "escape") {
+        cancelGesture()
         setPendingPoint(null)
         setDragStart(null)
         setDragCurrent(null)
@@ -58,6 +83,7 @@ export function useKeyboardShortcuts({
       }
 
       if (key === "d" && hoveredMarkerId != null) {
+        pushHistorySnapshot()
         const filteredMarkers = markers.filter((marker) => marker.id !== hoveredMarkerId)
         const renumberedMarkers = renumberMarkers(filteredMarkers)
         const idMapping = new Map(filteredMarkers.map((marker, index) => [marker.id, index + 1]))
@@ -83,6 +109,7 @@ export function useKeyboardShortcuts({
       const targetMarkerId = getShortcutTargetMarkerId(activeMarkerId, hoveredMarkerId)
       if (targetMarkerId == null || isGroupedMarker(targetMarkerId, groups)) return
 
+      pushHistorySnapshot()
       setMarkers((current) =>
         current.map((marker) =>
           marker.id === targetMarkerId
@@ -102,10 +129,16 @@ export function useKeyboardShortcuts({
   }, [
     activeMarkerId,
     blockSize,
+    cancelGesture,
+    canRedo,
+    canUndo,
     groupSpacing,
     groups,
     hoveredMarkerId,
     markers,
+    onRedo,
+    onUndo,
+    pushHistorySnapshot,
     stageSize,
     setActiveMarkerId,
     setDragBlockState,
