@@ -22,198 +22,68 @@ function renumberMarkers(markers) {
   return markers.map((marker, index) => ({ ...marker, id: index + 1 }));
 }
 
-function distanceBetweenBlocks(left, right) {
-  return Math.hypot(left.block.x - right.block.x, left.block.y - right.block.y);
-}
-
 function getTopLeftMostMarker(markers) {
   return [...markers].sort((left, right) => left.block.y - right.block.y || left.block.x - right.block.x)[0];
 }
 
-function buildNearestMarkerOrder(selectedMarkers) {
-  if (selectedMarkers.length === 0) return [];
+function getGroupingRowThreshold(blockSize, groupSpacing) {
+  return Math.max((blockSize.height + groupSpacing) / 2, blockSize.height * 0.75, 0.5);
+}
 
+function buildMarkersGroupedIntoRows(selectedMarkers, blockSize, groupSpacing) {
+  const sortedMarkers = [...selectedMarkers].sort(
+    (left, right) => left.block.y - right.block.y || left.block.x - right.block.x
+  );
+  const rowThreshold = getGroupingRowThreshold(blockSize, groupSpacing);
+  const rows = [];
+
+  sortedMarkers.forEach((marker) => {
+    const currentRow = rows[rows.length - 1];
+
+    if (!currentRow || Math.abs(marker.block.y - currentRow.anchorY) > rowThreshold) {
+      rows.push({
+        anchorY: marker.block.y,
+        markers: [marker],
+      });
+      return;
+    }
+
+    currentRow.markers.push(marker);
+    currentRow.markers.sort((left, right) => left.block.x - right.block.x || left.block.y - right.block.y);
+    currentRow.anchorY =
+      currentRow.markers.reduce((sum, current) => sum + current.block.y, 0) / currentRow.markers.length;
+  });
+
+  return rows.map((row) => row.markers);
+}
+
+function buildGroupLayoutFromRows(rows) {
   const orderedIds = [];
-  const remaining = new Map(selectedMarkers.map((marker) => [marker.id, marker]));
-  let current = getTopLeftMostMarker(selectedMarkers);
+  const slots = [];
 
-  while (current) {
-    orderedIds.push(current.id);
-    remaining.delete(current.id);
-
-    let nextMarker = null;
-
-    remaining.forEach((candidate) => {
-      if (
-        !nextMarker ||
-        distanceBetweenBlocks(current, candidate) < distanceBetweenBlocks(current, nextMarker) ||
-        (
-          distanceBetweenBlocks(current, candidate) === distanceBetweenBlocks(current, nextMarker) &&
-          (candidate.block.y < nextMarker.block.y ||
-            (candidate.block.y === nextMarker.block.y && candidate.block.x < nextMarker.block.x))
-        )
-      ) {
-        nextMarker = candidate;
-      }
-    });
-
-    current = nextMarker;
-  }
-
-  return orderedIds;
-}
-
-function distanceBetweenPoints(left, right) {
-  return Math.hypot(left.x - right.x, left.y - right.y);
-}
-
-function getTopLeftMostUnit(units) {
-  return [...units].sort((left, right) => left.anchor.y - right.anchor.y || left.anchor.x - right.anchor.x)[0];
-}
-
-function buildNearestUnitOrder(units) {
-  if (units.length === 0) return [];
-
-  const orderedUnitIds = [];
-  const remaining = new Map(units.map((unit) => [unit.id, unit]));
-  let current = getTopLeftMostUnit(units);
-
-  while (current) {
-    orderedUnitIds.push(current.id);
-    remaining.delete(current.id);
-
-    let nextUnit = null;
-
-    remaining.forEach((candidate) => {
-      if (
-        !nextUnit ||
-        distanceBetweenPoints(current.anchor, candidate.anchor) <
-          distanceBetweenPoints(current.anchor, nextUnit.anchor) ||
-        (
-          distanceBetweenPoints(current.anchor, candidate.anchor) ===
-            distanceBetweenPoints(current.anchor, nextUnit.anchor) &&
-          (candidate.anchor.y < nextUnit.anchor.y ||
-            (candidate.anchor.y === nextUnit.anchor.y && candidate.anchor.x < nextUnit.anchor.x))
-        )
-      ) {
-        nextUnit = candidate;
-      }
-    });
-
-    current = nextUnit;
-  }
-
-  return orderedUnitIds;
-}
-
-function getSlotKey(column, row) {
-  return `${column},${row}`;
-}
-
-function getSlotNeighbors(column, row) {
-  return [
-    { column: column + 1, row },
-    { column, row: row + 1 },
-    { column: column - 1, row },
-    { column, row: row - 1 },
-  ].filter((slot) => slot.column >= 0 && slot.row >= 0);
-}
-
-function countOccupiedNeighbors(slot, occupiedKeys) {
-  return getSlotNeighbors(slot.column, slot.row).filter((neighbor) =>
-    occupiedKeys.has(getSlotKey(neighbor.column, neighbor.row))
-  ).length;
-}
-
-function buildMagnetSlots(count) {
-  if (count <= 0) return [];
-
-  const slots = [{ column: 0, row: 0 }];
-  const occupiedKeys = new Set([getSlotKey(0, 0)]);
-  const frontier = new Map();
-
-  getSlotNeighbors(0, 0).forEach((slot) => {
-    frontier.set(getSlotKey(slot.column, slot.row), slot);
-  });
-
-  while (slots.length < count && frontier.size > 0) {
-    const nextSlot = [...frontier.values()].sort((left, right) => {
-      const leftDistance = left.column + left.row;
-      const rightDistance = right.column + right.row;
-
-      if (leftDistance !== rightDistance) return leftDistance - rightDistance;
-
-      const leftNeighbors = countOccupiedNeighbors(left, occupiedKeys);
-      const rightNeighbors = countOccupiedNeighbors(right, occupiedKeys);
-
-      if (leftNeighbors !== rightNeighbors) return rightNeighbors - leftNeighbors;
-      if (left.row !== right.row) return left.row - right.row;
-      return left.column - right.column;
-    })[0];
-
-    slots.push(nextSlot);
-    const slotKey = getSlotKey(nextSlot.column, nextSlot.row);
-    frontier.delete(slotKey);
-    occupiedKeys.add(slotKey);
-
-    getSlotNeighbors(nextSlot.column, nextSlot.row).forEach((neighbor) => {
-      const neighborKey = getSlotKey(neighbor.column, neighbor.row);
-      if (!occupiedKeys.has(neighborKey)) {
-        frontier.set(neighborKey, neighbor);
-      }
-    });
-  }
-
-  return slots;
-}
-
-function buildGroupAwareMarkerOrder(markers, selectedIds, groups) {
-  const selectedIdSet = new Set(selectedIds);
-  const selectedMarkers = markers.filter((marker) => selectedIdSet.has(marker.id));
-  const selectedMarkerIds = new Set(selectedMarkers.map((marker) => marker.id));
-  const markerById = new Map(selectedMarkers.map((marker) => [marker.id, marker]));
-  const consumedIds = new Set();
-  const units = [];
-
-  groups.forEach((group) => {
-    const groupMarkerIds = group.orderedIds.filter((markerId) => selectedMarkerIds.has(markerId));
-    if (groupMarkerIds.length === 0) return;
-
-    groupMarkerIds.forEach((markerId) => consumedIds.add(markerId));
-    units.push({
-      id: `group-${group.id}`,
-      anchor: { ...group.anchor },
-      orderedIds: groupMarkerIds,
+  rows.forEach((row, rowIndex) => {
+    row.forEach((marker, columnIndex) => {
+      orderedIds.push(marker.id);
+      slots.push({ column: columnIndex, row: rowIndex });
     });
   });
 
-  selectedMarkers.forEach((marker) => {
-    if (consumedIds.has(marker.id)) return;
-
-    units.push({
-      id: `marker-${marker.id}`,
-      anchor: { ...marker.block },
-      orderedIds: [marker.id],
-    });
-  });
-
-  const orderedUnitIds = buildNearestUnitOrder(units);
-  const unitById = new Map(units.map((unit) => [unit.id, unit]));
-
-  return orderedUnitIds.flatMap((unitId) => unitById.get(unitId)?.orderedIds ?? []);
+  return { orderedIds, slots };
 }
 
-function createGroupLayout(markers, selectedIds, groups) {
+function createGroupLayout(markers, selectedIds, blockSize, groupSpacing) {
   const selectedMarkers = markers.filter((marker) => selectedIds.includes(marker.id));
 
   if (selectedMarkers.length < 2) return null;
 
   const topLeftMarker = getTopLeftMostMarker(selectedMarkers);
+  const rows = buildMarkersGroupedIntoRows(selectedMarkers, blockSize, groupSpacing);
+  const { orderedIds, slots } = buildGroupLayoutFromRows(rows);
 
   return {
     anchor: { x: topLeftMarker.block.x, y: topLeftMarker.block.y },
-    orderedIds: buildGroupAwareMarkerOrder(markers, selectedIds, groups),
-    slots: buildMagnetSlots(selectedMarkers.length),
+    orderedIds,
+    slots,
   };
 }
 
@@ -274,25 +144,42 @@ function expandSelectedIdsWithGroups(selectedIds, groups) {
 }
 
 function remapGroups(groups, idMapping, markers, blockSize, groupSpacing) {
+  const singleMarkerBlocks = new Map();
   const nextGroups = groups
     .map((group) => {
       const nextOrderedIds = group.orderedIds
         .map((markerId) => idMapping.get(markerId))
-        .filter(Boolean);
+        .filter((markerId) => markerId != null);
+
+      if (nextOrderedIds.length === 1) {
+        const slot = group.slots?.[0] ?? { column: 0, row: 0 };
+
+        singleMarkerBlocks.set(nextOrderedIds[0], {
+          x: group.anchor.x + slot.column * (blockSize.width + groupSpacing),
+          y: group.anchor.y + slot.row * (blockSize.height + groupSpacing),
+        });
+        return null;
+      }
 
       if (nextOrderedIds.length < 2) return null;
 
       return {
         ...group,
         orderedIds: nextOrderedIds,
-        slots: buildMagnetSlots(nextOrderedIds.length),
+        slots: (group.slots ?? []).slice(0, nextOrderedIds.length),
       };
     })
     .filter(Boolean);
 
+  const nextMarkers = markers.map((marker) =>
+    singleMarkerBlocks.has(marker.id)
+      ? { ...marker, block: singleMarkerBlocks.get(marker.id) }
+      : marker
+  );
+
   return {
     groups: nextGroups,
-    markers: applyGroupLayouts(markers, nextGroups, blockSize, groupSpacing),
+    markers: applyGroupLayouts(nextMarkers, nextGroups, blockSize, groupSpacing),
   };
 }
 
@@ -695,7 +582,12 @@ export function useLinkedMapState() {
         const remainingGroups = groups.filter(
           (group) => !group.orderedIds.some((markerId) => expandedSelectedBlockIds.includes(markerId))
         );
-        const nextGroup = createGroupLayout(markers, expandedSelectedBlockIds, groups);
+        const nextGroup = createGroupLayout(
+          markers,
+          expandedSelectedBlockIds,
+          blockSize,
+          groupSpacing
+        );
 
         if (nextGroup) {
           const createdGroup = {
