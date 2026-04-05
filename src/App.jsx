@@ -54,7 +54,9 @@ export default function LinkedMapMarkerSite() {
       ) : (
         <>
           <Toolbar
+            groupingMode={state.groupingMode}
             hasCoordinates={state.markers.length > 0}
+            hasGroups={state.groups.length > 0}
             hasPaths={state.paths.length > 0}
             mode={state.mode}
             selectMode={state.selectMode}
@@ -62,10 +64,12 @@ export default function LinkedMapMarkerSite() {
             onRestoreCoordinates={() => restoreInputRef.current?.click()}
             onClearCoordinates={state.clearCoordinates}
             onClearCoordinatesAndPaths={state.clearCoordinatesAndPaths}
+            onClearGroups={state.clearGroups}
             onClearPaths={state.clearPaths}
             onChangeMode={state.changeMode}
             onSelectImage={() => inputRef.current?.click()}
             onStartSharing={handleStartSharing}
+            onToggleGroupingMode={state.toggleGroupingMode}
             onToggleSelectMode={state.toggleSelectMode}
           />
           <MapStage
@@ -73,6 +77,10 @@ export default function LinkedMapMarkerSite() {
             blockSize={state.blockSize}
             dragCurrent={state.dragCurrent}
             dragStart={state.dragStart}
+            groupSpacing={state.groupSpacing}
+            groupedMarkerIds={state.groupedMarkerIds}
+            groups={state.groups}
+            groupingMode={state.groupingMode}
             hoveredMarkerId={state.hoveredMarkerId}
             mediaSource={state.mediaSource}
             markers={state.markers}
@@ -84,6 +92,7 @@ export default function LinkedMapMarkerSite() {
             zoomScale={state.zoomScale}
             onActivateMarker={state.setActiveMarkerId}
             onResizeStart={state.handleResizeStart}
+            onStartSpacingDrag={state.handleSpacingDragStart}
             onSurfaceReady={state.updateSurfaceSize}
             onHoverMarker={state.setHoveredMarkerId}
             onMouseDown={state.handleMouseDown}

@@ -5,5 +5,7 @@ export const ZOOM_STEP = 1.2;
 export const DEFAULT_BLOCK_SIZE = { width: 4, height: 4 };
 export const MIN_BLOCK_SIZE = { width: 0.5, height: 0.5 };
 export const RESIZE_HANDLE_SIZE = 10;
+export const DEFAULT_GROUP_SPACING = 0.6;
+export const MIN_GROUP_SPACING = 0;
 
 export const PATH_COLORS = ["#00e5ff", "#ff9100", "#76ff03", "#ff4081", "#d500f9"];

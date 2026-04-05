@@ -14,35 +14,56 @@ const HANDLE_POSITIONS = [
 export function DotLayer({
   activeMarkerId,
   blockSize,
+  groupedMarkerIds,
+  groupingMode,
   hoveredMarkerId,
   markers,
   onActivateMarker,
   onHoverMarker,
   onResizeStart,
+  selectMode,
   zoomScale,
 }) {
+  const interactionLocked = selectMode || groupingMode;
+  const blockHoverEnabled = !selectMode;
+  const groupedMarkerIdSet = new Set(groupedMarkerIds);
+
   return markers.map((marker) => {
     const isHovered = hoveredMarkerId === marker.id;
     const isActive = activeMarkerId === marker.id;
-    const accentColor = isHovered || isActive ? "lime" : "#00FFFF";
+    const isGrouped = groupedMarkerIdSet.has(marker.id);
+    const accentColor = isHovered || isActive ? "lime" : isGrouped ? "#ff6b6b" : "#00FFFF";
+    const blockBackground = isHovered || isActive
+      ? "rgba(0,255,0,0.08)"
+      : isGrouped
+        ? "rgba(255,75,75,0.12)"
+        : "rgba(0,229,255,0.08)";
 
     return (
       <div key={marker.id}>
         <div
           role="button"
-          tabIndex={0}
+          tabIndex={interactionLocked ? -1 : 0}
           aria-label={`Marker ${marker.id} block`}
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            onActivateMarker(marker.id);
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter" && event.key !== " ") return;
-            event.preventDefault();
-            event.stopPropagation();
-            onActivateMarker(marker.id);
-          }}
+          onMouseDown={interactionLocked ? undefined : (event) => event.stopPropagation()}
+          onClick={
+            interactionLocked
+              ? undefined
+              : (event) => {
+                  event.stopPropagation();
+                  onActivateMarker(marker.id);
+                }
+          }
+          onKeyDown={
+            interactionLocked
+              ? undefined
+              : (event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onActivateMarker(marker.id);
+                }
+          }
           onMouseEnter={() => onHoverMarker(marker.id)}
           onMouseLeave={() => onHoverMarker((current) => (current === marker.id ? null : current))}
           style={{
@@ -53,11 +74,16 @@ export function DotLayer({
             height: `${blockSize.height}%`,
             transform: "translate(-50%, -50%)",
             border: `1.5px solid ${accentColor}`,
-            background: isHovered || isActive ? "rgba(0,255,0,0.08)" : "rgba(0,229,255,0.08)",
+            background: blockBackground,
             boxShadow:
-              isHovered || isActive ? "0 0 0 1px rgba(0,255,0,0.55), 0 0 18px rgba(0,255,0,0.35)" : "none",
+              isHovered || isActive
+                ? "0 0 0 1px rgba(0,255,0,0.55), 0 0 18px rgba(0,255,0,0.35)"
+                : isGrouped
+                  ? "0 0 0 1px rgba(255,107,107,0.55), 0 0 18px rgba(255,75,75,0.25)"
+                  : "none",
             zIndex: isActive ? 14 : 11,
-            cursor: "pointer",
+            cursor: interactionLocked ? "default" : "pointer",
+            pointerEvents: blockHoverEnabled ? "auto" : "none",
           }}
         >
           <span
@@ -75,13 +101,16 @@ export function DotLayer({
               textShadow:
                 isHovered || isActive
                   ? "0 0 8px rgba(0,255,0,0.85)"
-                  : "0 0 2px rgba(255,255,255,0.65)",
+                  : isGrouped
+                    ? "0 0 8px rgba(255,75,75,0.55)"
+                    : "0 0 2px rgba(255,255,255,0.65)",
               pointerEvents: "none",
             }}
           >
             {marker.id}
           </span>
-          {isActive &&
+          {!interactionLocked &&
+            isActive &&
             HANDLE_POSITIONS.map((handle) => (
               <button
                 key={handle.key}
@@ -112,11 +141,15 @@ export function DotLayer({
         <button
           type="button"
           aria-label={`Marker ${marker.id} dot`}
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            onActivateMarker(marker.id);
-          }}
+          onMouseDown={interactionLocked ? undefined : (event) => event.stopPropagation()}
+          onClick={
+            interactionLocked
+              ? undefined
+              : (event) => {
+                  event.stopPropagation();
+                  onActivateMarker(marker.id);
+                }
+          }
           onMouseEnter={() => onHoverMarker(marker.id)}
           onMouseLeave={() => onHoverMarker((current) => (current === marker.id ? null : current))}
           style={{
@@ -130,8 +163,9 @@ export function DotLayer({
             border: "none",
             background: "transparent",
             zIndex: 12,
-            cursor: "pointer",
+            cursor: interactionLocked ? "default" : "pointer",
             overflow: "visible",
+            pointerEvents: interactionLocked ? "none" : "auto",
           }}
         >
           <span

@@ -1,7 +1,9 @@
 import { useState } from "react";
 
 export function Toolbar({
+  groupingMode,
   hasCoordinates,
+  hasGroups,
   hasPaths,
   mode,
   selectMode,
@@ -9,10 +11,12 @@ export function Toolbar({
   onRestoreCoordinates,
   onClearCoordinates,
   onClearCoordinatesAndPaths,
+  onClearGroups,
   onClearPaths,
   onChangeMode,
   onSelectImage,
   onStartSharing,
+  onToggleGroupingMode,
   onToggleSelectMode,
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -92,6 +96,17 @@ export function Toolbar({
           >
             {selectMode ? "✔ Select to draw optimize path" : "⬚ Select to draw optimize path"}
           </button>
+          <button
+            type="button"
+            onClick={onToggleGroupingMode}
+            style={
+              groupingMode
+                ? buttonStyle("1px solid #ff6666", "rgba(255,64,64,0.18)", "#ff8d8d")
+                : buttonStyle("1px solid white", "rgba(0,0,0,0.7)", "white")
+            }
+          >
+            {groupingMode ? "✔ Grouping block" : "⬚ Grouping block"}
+          </button>
           {hasPaths && (
             <button
               type="button"
@@ -99,6 +114,15 @@ export function Toolbar({
               style={buttonStyle("1px solid #ff4444", "rgba(255,0,0,0.15)", "#ff4444")}
             >
               Clear paths
+            </button>
+          )}
+          {hasGroups && (
+            <button
+              type="button"
+              onClick={onClearGroups}
+              style={buttonStyle("1px solid #ff6666", "rgba(255,64,64,0.18)", "#ff8d8d")}
+            >
+              Ungroup all
             </button>
           )}
           {hasCoordinates && (

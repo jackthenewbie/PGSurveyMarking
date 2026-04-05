@@ -1,4 +1,9 @@
-export function SelectionRect({ dragCurrent, dragStart }) {
+export function SelectionRect({
+  background = "rgba(0,255,0,0.07)",
+  borderColor = "lime",
+  dragCurrent,
+  dragStart,
+}) {
   if (!dragStart || !dragCurrent) return null;
 
   const rect = {
@@ -16,8 +21,8 @@ export function SelectionRect({ dragCurrent, dragStart }) {
         top: `${rect.top}%`,
         width: `${rect.width}%`,
         height: `${rect.height}%`,
-        border: "1.5px dashed lime",
-        background: "rgba(0,255,0,0.07)",
+        border: `1.5px dashed ${borderColor}`,
+        background,
         pointerEvents: "none",
         zIndex: 15,
       }}

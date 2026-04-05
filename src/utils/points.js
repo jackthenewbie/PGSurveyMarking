@@ -24,3 +24,15 @@ export function collectSelectedDots(markers, bounds) {
 
   return selected;
 }
+
+export function collectSelectedBlocks(markers, bounds) {
+  return markers
+    .filter(
+      (marker) =>
+        marker.block.x >= bounds.minX &&
+        marker.block.x <= bounds.maxX &&
+        marker.block.y >= bounds.minY &&
+        marker.block.y <= bounds.maxY
+    )
+    .map((marker) => marker.id);
+}

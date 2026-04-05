@@ -6,6 +6,10 @@ export function MapStage({
   blockSize,
   dragCurrent,
   dragStart,
+  groupSpacing,
+  groupedMarkerIds,
+  groups,
+  groupingMode,
   hoveredMarkerId,
   mediaSource,
   markers,
@@ -17,6 +21,7 @@ export function MapStage({
   zoomScale,
   onActivateMarker,
   onResizeStart,
+  onStartSpacingDrag,
   onSurfaceReady,
   onHoverMarker,
   onMouseDown,
@@ -59,6 +64,10 @@ export function MapStage({
             blockSize={blockSize}
             dragCurrent={dragCurrent}
             dragStart={dragStart}
+            groupSpacing={groupSpacing}
+            groupedMarkerIds={groupedMarkerIds}
+            groups={groups}
+            groupingMode={groupingMode}
             hoveredMarkerId={hoveredMarkerId}
             markers={markers}
             paths={paths}
@@ -72,6 +81,7 @@ export function MapStage({
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
             onResizeStart={onResizeStart}
+            onStartSpacingDrag={onStartSpacingDrag}
             onStageClick={onStageClick}
             onWheel={onWheel}
           />

@@ -1,4 +1,5 @@
 import { DotLayer } from "./DotLayer";
+import { GroupSpacingHandle } from "./GroupSpacingHandle";
 import { PathOverlay } from "./PathOverlay";
 import { PendingDot } from "./PendingDot";
 import { SelectionRect } from "./SelectionRect";
@@ -8,6 +9,10 @@ export function AnnotationOverlay({
   blockSize,
   dragCurrent,
   dragStart,
+  groupSpacing,
+  groupedMarkerIds,
+  groups,
+  groupingMode,
   hoveredMarkerId,
   markers,
   paths,
@@ -21,6 +26,7 @@ export function AnnotationOverlay({
   onMouseMove,
   onMouseUp,
   onResizeStart,
+  onStartSpacingDrag,
   onStageClick,
   onWheel,
 }) {
@@ -42,15 +48,35 @@ export function AnnotationOverlay({
       <DotLayer
         activeMarkerId={activeMarkerId}
         blockSize={blockSize}
+        groupedMarkerIds={groupedMarkerIds}
+        groupingMode={groupingMode}
         hoveredMarkerId={hoveredMarkerId}
         markers={markers}
         onActivateMarker={onActivateMarker}
         onHoverMarker={onHoverMarker}
         onResizeStart={onResizeStart}
+        selectMode={selectMode}
         zoomScale={zoomScale}
       />
+      {groupingMode &&
+        groups.map((group) => (
+          <GroupSpacingHandle
+            key={group.id}
+            blockSize={blockSize}
+            groupLayout={group}
+            groupSpacing={groupSpacing}
+            onStartSpacingDrag={onStartSpacingDrag}
+          />
+        ))}
       <PendingDot blockSize={blockSize} point={pendingPoint} />
-      {selectMode && <SelectionRect dragCurrent={dragCurrent} dragStart={dragStart} />}
+      {(selectMode || groupingMode) && (
+        <SelectionRect
+          background={groupingMode ? "rgba(255,64,64,0.08)" : undefined}
+          borderColor={groupingMode ? "#ff5a5a" : undefined}
+          dragCurrent={dragCurrent}
+          dragStart={dragStart}
+        />
+      )}
     </div>
   );
 }
