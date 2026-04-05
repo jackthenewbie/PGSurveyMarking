@@ -216,3 +216,13 @@ export function clearPersistedAnnotationState() {
     // Ignore storage cleanup errors.
   }
 }
+
+export function clearPersistedAnnotationSettings() {
+  if (typeof window === "undefined" || !window.localStorage) return
+
+  try {
+    window.localStorage.removeItem(SETTINGS_STORAGE_KEY)
+  } catch {
+    // Ignore storage cleanup errors.
+  }
+}
