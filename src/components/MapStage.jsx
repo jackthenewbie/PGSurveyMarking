@@ -16,10 +16,12 @@ export function MapStage({
   paths,
   pendingPoint,
   selectMode,
+  showMarkerLabels,
   stageSize,
   zoomOrigin,
   zoomScale,
   onActivateMarker,
+  onBlockDragStart,
   onResizeStart,
   onStartSpacingDrag,
   onSurfaceReady,
@@ -73,9 +75,11 @@ export function MapStage({
             paths={paths}
             pendingPoint={pendingPoint}
             selectMode={selectMode}
+            showMarkerLabels={showMarkerLabels}
             stageSize={stageSize}
             zoomScale={zoomScale}
             onActivateMarker={onActivateMarker}
+            onBlockDragStart={onBlockDragStart}
             onHoverMarker={onHoverMarker}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}

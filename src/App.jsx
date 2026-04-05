@@ -60,6 +60,7 @@ export default function LinkedMapMarkerSite() {
             hasPaths={state.paths.length > 0}
             mode={state.mode}
             selectMode={state.selectMode}
+            showMarkerLabels={state.showMarkerLabels}
             onBackupCoordinates={state.downloadCoordinates}
             onRestoreCoordinates={() => restoreInputRef.current?.click()}
             onClearCoordinates={state.clearCoordinates}
@@ -70,6 +71,7 @@ export default function LinkedMapMarkerSite() {
             onSelectImage={() => inputRef.current?.click()}
             onStartSharing={handleStartSharing}
             onToggleGroupingMode={state.toggleGroupingMode}
+            onToggleMarkerLabels={state.toggleMarkerLabels}
             onToggleSelectMode={state.toggleSelectMode}
           />
           <MapStage
@@ -87,10 +89,12 @@ export default function LinkedMapMarkerSite() {
             paths={state.paths}
             pendingPoint={state.pendingPoint}
             selectMode={state.selectMode}
+            showMarkerLabels={state.showMarkerLabels}
             stageSize={state.stageSize}
             zoomOrigin={state.zoomOrigin}
             zoomScale={state.zoomScale}
             onActivateMarker={state.setActiveMarkerId}
+            onBlockDragStart={state.handleBlockDragStart}
             onResizeStart={state.handleResizeStart}
             onStartSpacingDrag={state.handleSpacingDragStart}
             onSurfaceReady={state.updateSurfaceSize}

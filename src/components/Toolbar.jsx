@@ -7,6 +7,7 @@ export function Toolbar({
   hasPaths,
   mode,
   selectMode,
+  showMarkerLabels,
   onBackupCoordinates,
   onRestoreCoordinates,
   onClearCoordinates,
@@ -17,6 +18,7 @@ export function Toolbar({
   onSelectImage,
   onStartSharing,
   onToggleGroupingMode,
+  onToggleMarkerLabels,
   onToggleSelectMode,
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -106,6 +108,17 @@ export function Toolbar({
             }
           >
             {groupingMode ? "✔ Grouping block" : "⬚ Grouping block"}
+          </button>
+          <button
+            type="button"
+            onClick={onToggleMarkerLabels}
+            style={
+              showMarkerLabels
+                ? buttonStyle("1px solid #00e5ff", "rgba(0,229,255,0.12)", "#00e5ff")
+                : buttonStyle("1px solid white", "rgba(0,0,0,0.7)", "white")
+            }
+          >
+            {showMarkerLabels ? "✔ Show marker labels" : "⬚ Show marker labels"}
           </button>
           {hasPaths && (
             <button

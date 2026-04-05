@@ -57,8 +57,8 @@ export function GroupSpacingHandle({
         key={handle.key}
         type="button"
         aria-label="Adjust grouped block spacing"
-        onMouseEnter={() => setHoveredHandleKey(handle.key)}
-        onMouseLeave={() => setHoveredHandleKey((current) => (current === handle.key ? null : current))}
+        onPointerEnter={() => setHoveredHandleKey(handle.key)}
+        onPointerLeave={() => setHoveredHandleKey((current) => (current === handle.key ? null : current))}
         onFocus={() => setHoveredHandleKey(handle.key)}
         onBlur={() => setHoveredHandleKey((current) => (current === handle.key ? null : current))}
         onMouseDown={(event) => {
@@ -73,15 +73,15 @@ export function GroupSpacingHandle({
           position: "absolute",
           left: `${handle.left}%`,
           top: `${handle.top}%`,
-          width: isHorizontalGap ? "16px" : `${blockSize.width}%`,
-          height: isHorizontalGap ? `${blockSize.height}%` : "16px",
+          width: isHorizontalGap ? "24px" : `calc(${blockSize.width}% + 16px)`,
+          height: isHorizontalGap ? `calc(${blockSize.height}% + 16px)` : "24px",
           transform: "translate(-50%, -50%)",
           border: "none",
           background: "transparent",
           padding: 0,
           margin: 0,
           cursor: isHorizontalGap ? "ew-resize" : "ns-resize",
-          zIndex: 17,
+          zIndex: 25,
         }}
       >
         <span
@@ -90,8 +90,8 @@ export function GroupSpacingHandle({
             position: "absolute",
             left: "50%",
             top: "50%",
-            width: isHorizontalGap ? "6px" : "100%",
-            height: isHorizontalGap ? "100%" : "6px",
+            width: isHorizontalGap ? "6px" : `${blockSize.width}%`,
+            height: isHorizontalGap ? `${blockSize.height}%` : "6px",
             transform: "translate(-50%, -50%)",
             border: "1px solid rgba(255,160,160,0.9)",
             background: "rgba(255,50,50,0.7)",

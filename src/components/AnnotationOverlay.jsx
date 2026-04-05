@@ -18,9 +18,11 @@ export function AnnotationOverlay({
   paths,
   pendingPoint,
   selectMode,
+  showMarkerLabels,
   stageSize,
   zoomScale,
   onActivateMarker,
+  onBlockDragStart,
   onHoverMarker,
   onMouseDown,
   onMouseMove,
@@ -53,9 +55,11 @@ export function AnnotationOverlay({
         hoveredMarkerId={hoveredMarkerId}
         markers={markers}
         onActivateMarker={onActivateMarker}
+        onBlockDragStart={onBlockDragStart}
         onHoverMarker={onHoverMarker}
         onResizeStart={onResizeStart}
         selectMode={selectMode}
+        showMarkerLabels={showMarkerLabels}
         zoomScale={zoomScale}
       />
       {groupingMode &&

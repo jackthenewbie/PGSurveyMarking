@@ -63,6 +63,49 @@ function buildNearestMarkerOrder(selectedMarkers) {
   return orderedIds;
 }
 
+function distanceBetweenPoints(left, right) {
+  return Math.hypot(left.x - right.x, left.y - right.y);
+}
+
+function getTopLeftMostUnit(units) {
+  return [...units].sort((left, right) => left.anchor.y - right.anchor.y || left.anchor.x - right.anchor.x)[0];
+}
+
+function buildNearestUnitOrder(units) {
+  if (units.length === 0) return [];
+
+  const orderedUnitIds = [];
+  const remaining = new Map(units.map((unit) => [unit.id, unit]));
+  let current = getTopLeftMostUnit(units);
+
+  while (current) {
+    orderedUnitIds.push(current.id);
+    remaining.delete(current.id);
+
+    let nextUnit = null;
+
+    remaining.forEach((candidate) => {
+      if (
+        !nextUnit ||
+        distanceBetweenPoints(current.anchor, candidate.anchor) <
+          distanceBetweenPoints(current.anchor, nextUnit.anchor) ||
+        (
+          distanceBetweenPoints(current.anchor, candidate.anchor) ===
+            distanceBetweenPoints(current.anchor, nextUnit.anchor) &&
+          (candidate.anchor.y < nextUnit.anchor.y ||
+            (candidate.anchor.y === nextUnit.anchor.y && candidate.anchor.x < nextUnit.anchor.x))
+        )
+      ) {
+        nextUnit = candidate;
+      }
+    });
+
+    current = nextUnit;
+  }
+
+  return orderedUnitIds;
+}
+
 function getSlotKey(column, row) {
   return `${column},${row}`;
 }
@@ -124,7 +167,43 @@ function buildMagnetSlots(count) {
   return slots;
 }
 
-function createGroupLayout(markers, selectedIds, blockSize, groupSpacing) {
+function buildGroupAwareMarkerOrder(markers, selectedIds, groups) {
+  const selectedIdSet = new Set(selectedIds);
+  const selectedMarkers = markers.filter((marker) => selectedIdSet.has(marker.id));
+  const selectedMarkerIds = new Set(selectedMarkers.map((marker) => marker.id));
+  const markerById = new Map(selectedMarkers.map((marker) => [marker.id, marker]));
+  const consumedIds = new Set();
+  const units = [];
+
+  groups.forEach((group) => {
+    const groupMarkerIds = group.orderedIds.filter((markerId) => selectedMarkerIds.has(markerId));
+    if (groupMarkerIds.length === 0) return;
+
+    groupMarkerIds.forEach((markerId) => consumedIds.add(markerId));
+    units.push({
+      id: `group-${group.id}`,
+      anchor: { ...group.anchor },
+      orderedIds: groupMarkerIds,
+    });
+  });
+
+  selectedMarkers.forEach((marker) => {
+    if (consumedIds.has(marker.id)) return;
+
+    units.push({
+      id: `marker-${marker.id}`,
+      anchor: { ...marker.block },
+      orderedIds: [marker.id],
+    });
+  });
+
+  const orderedUnitIds = buildNearestUnitOrder(units);
+  const unitById = new Map(units.map((unit) => [unit.id, unit]));
+
+  return orderedUnitIds.flatMap((unitId) => unitById.get(unitId)?.orderedIds ?? []);
+}
+
+function createGroupLayout(markers, selectedIds, groups) {
   const selectedMarkers = markers.filter((marker) => selectedIds.includes(marker.id));
 
   if (selectedMarkers.length < 2) return null;
@@ -133,7 +212,7 @@ function createGroupLayout(markers, selectedIds, blockSize, groupSpacing) {
 
   return {
     anchor: { x: topLeftMarker.block.x, y: topLeftMarker.block.y },
-    orderedIds: buildNearestMarkerOrder(selectedMarkers),
+    orderedIds: buildGroupAwareMarkerOrder(markers, selectedIds, groups),
     slots: buildMagnetSlots(selectedMarkers.length),
   };
 }
@@ -171,6 +250,27 @@ function applyGroupLayouts(markers, groups, blockSize, groupSpacing) {
 
 function flattenGroupedMarkerIds(groups) {
   return [...new Set(groups.flatMap((group) => group.orderedIds))];
+}
+
+function expandSelectedIdsWithGroups(selectedIds, groups) {
+  const expandedIds = new Set(selectedIds);
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+
+    groups.forEach((group) => {
+      if (!group.orderedIds.some((markerId) => expandedIds.has(markerId))) return;
+
+      group.orderedIds.forEach((markerId) => {
+        if (expandedIds.has(markerId)) return;
+        expandedIds.add(markerId);
+        changed = true;
+      });
+    });
+  }
+
+  return [...expandedIds];
 }
 
 function remapGroups(groups, idMapping, markers, blockSize, groupSpacing) {
@@ -235,8 +335,10 @@ export function useLinkedMapState() {
   const [zoomOrigin, setZoomOrigin] = useState(DEFAULT_ZOOM_ORIGIN);
   const [blockSize, setBlockSize] = useState(DEFAULT_BLOCK_SIZE);
   const [groupSpacing, setGroupSpacing] = useState(DEFAULT_GROUP_SPACING);
+  const [showMarkerLabels, setShowMarkerLabels] = useState(true);
   const [resizeState, setResizeState] = useState(null);
   const [spacingDragState, setSpacingDragState] = useState(null);
+  const [dragBlockState, setDragBlockState] = useState(null);
 
   useEffect(() => {
     return () => {
@@ -263,6 +365,7 @@ export function useLinkedMapState() {
         setDragCurrent(null);
         setResizeState(null);
         setSpacingDragState(null);
+        setDragBlockState(null);
         setActiveMarkerId(null);
       }
 
@@ -316,6 +419,7 @@ export function useLinkedMapState() {
     setGroupSpacing(DEFAULT_GROUP_SPACING);
     setResizeState(null);
     setSpacingDragState(null);
+    setDragBlockState(null);
     nextPathIdRef.current = 1;
     nextGroupIdRef.current = 1;
   }
@@ -505,6 +609,44 @@ export function useLinkedMapState() {
       return;
     }
 
+    if (dragBlockState) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const deltaX = ((event.clientX - dragBlockState.startClientX) / rect.width) * 100;
+      const deltaY = ((event.clientY - dragBlockState.startClientY) / rect.height) * 100;
+
+      if (dragBlockState.groupId != null) {
+        const nextGroups = groups.map((group) =>
+          group.id === dragBlockState.groupId
+            ? {
+                ...group,
+                anchor: {
+                  x: clamp(dragBlockState.startAnchor.x + deltaX, 0, 100),
+                  y: clamp(dragBlockState.startAnchor.y + deltaY, 0, 100),
+                },
+              }
+            : group
+        );
+
+        setGroups(nextGroups);
+        setMarkers((current) => applyGroupLayouts(current, nextGroups, blockSize, groupSpacing));
+      } else {
+        setMarkers((current) =>
+          current.map((marker) =>
+            marker.id === dragBlockState.markerId
+              ? {
+                  ...marker,
+                  block: {
+                    x: clamp(dragBlockState.startBlock.x + deltaX, 0, 100),
+                    y: clamp(dragBlockState.startBlock.y + deltaY, 0, 100),
+                  },
+                }
+              : marker
+          )
+        );
+      }
+      return;
+    }
+
     if (spacingDragState) {
       const delta =
         spacingDragState.axis === "x"
@@ -529,6 +671,11 @@ export function useLinkedMapState() {
       return;
     }
 
+    if (dragBlockState) {
+      setDragBlockState(null);
+      return;
+    }
+
     if (spacingDragState) {
       setSpacingDragState(null);
       return;
@@ -542,12 +689,13 @@ export function useLinkedMapState() {
 
     if (groupingMode) {
       const selectedBlockIds = collectSelectedBlocks(markers, { minX, maxX, minY, maxY });
+      const expandedSelectedBlockIds = expandSelectedIdsWithGroups(selectedBlockIds, groups);
 
-      if (selectedBlockIds.length >= 2) {
+      if (expandedSelectedBlockIds.length >= 2) {
         const remainingGroups = groups.filter(
-          (group) => !group.orderedIds.some((markerId) => selectedBlockIds.includes(markerId))
+          (group) => !group.orderedIds.some((markerId) => expandedSelectedBlockIds.includes(markerId))
         );
-        const nextGroup = createGroupLayout(markers, selectedBlockIds, blockSize, groupSpacing);
+        const nextGroup = createGroupLayout(markers, expandedSelectedBlockIds, groups);
 
         if (nextGroup) {
           const createdGroup = {
@@ -582,6 +730,7 @@ export function useLinkedMapState() {
     setActiveMarkerId(null);
     setResizeState(null);
     setSpacingDragState(null);
+    setDragBlockState(null);
   }
 
   function toggleGroupingMode() {
@@ -593,6 +742,7 @@ export function useLinkedMapState() {
     setActiveMarkerId(null);
     setResizeState(null);
     setSpacingDragState(null);
+    setDragBlockState(null);
   }
 
   function clearTransientState() {
@@ -605,6 +755,7 @@ export function useLinkedMapState() {
     setPaths([]);
     setResizeState(null);
     setSpacingDragState(null);
+    setDragBlockState(null);
   }
 
   function clearCoordinates() {
@@ -617,6 +768,7 @@ export function useLinkedMapState() {
     setDragCurrent(null);
     setResizeState(null);
     setSpacingDragState(null);
+    setDragBlockState(null);
   }
 
   function clearCoordinatesAndPaths() {
@@ -674,6 +826,7 @@ export function useLinkedMapState() {
   function handleResizeStart(markerId, handle) {
     setPendingPoint(null);
     setActiveMarkerId(markerId);
+    setDragBlockState(null);
     setResizeState({
       markerId,
       affectsX: handle.includes("e") || handle.includes("w"),
@@ -685,6 +838,7 @@ export function useLinkedMapState() {
     if (groups.length === 0) return;
     setPendingPoint(null);
     setActiveMarkerId(null);
+    setDragBlockState(null);
     setSpacingDragState({
       axis,
       startClientX: startPoint.clientX,
@@ -696,6 +850,38 @@ export function useLinkedMapState() {
   function clearGroups() {
     setGroups([]);
     setSpacingDragState(null);
+    setDragBlockState(null);
+  }
+
+  function handleBlockDragStart(markerId, startPoint) {
+    if (selectMode || groupingMode || resizeState || spacingDragState) return;
+
+    const marker = markers.find((current) => current.id === markerId);
+    if (!marker) return;
+
+    const containingGroup = groups.find((group) => group.orderedIds.includes(markerId));
+
+    setPendingPoint(null);
+    setActiveMarkerId(markerId);
+    setResizeState(null);
+    setSpacingDragState(null);
+    setDragBlockState(
+      containingGroup
+        ? {
+            markerId,
+            groupId: containingGroup.id,
+            startClientX: startPoint.clientX,
+            startClientY: startPoint.clientY,
+            startAnchor: { ...containingGroup.anchor },
+          }
+        : {
+            markerId,
+            groupId: null,
+            startClientX: startPoint.clientX,
+            startClientY: startPoint.clientY,
+            startBlock: { ...marker.block },
+          }
+    );
   }
 
   return {
@@ -717,6 +903,7 @@ export function useLinkedMapState() {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
+    handleBlockDragStart,
     handleResizeStart,
     handleSpacingDragStart,
     handleStageClick,
@@ -732,8 +919,10 @@ export function useLinkedMapState() {
     selectMode,
     setActiveMarkerId: activateMarker,
     setHoveredMarkerId,
+    showMarkerLabels,
     stageSize,
     startScreenShare,
+    toggleMarkerLabels: () => setShowMarkerLabels((current) => !current),
     toggleGroupingMode,
     toggleSelectMode,
     updateSurfaceSize,

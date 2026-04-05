@@ -19,9 +19,11 @@ export function DotLayer({
   hoveredMarkerId,
   markers,
   onActivateMarker,
+  onBlockDragStart,
   onHoverMarker,
   onResizeStart,
   selectMode,
+  showMarkerLabels,
   zoomScale,
 }) {
   const interactionLocked = selectMode || groupingMode;
@@ -32,12 +34,10 @@ export function DotLayer({
     const isHovered = hoveredMarkerId === marker.id;
     const isActive = activeMarkerId === marker.id;
     const isGrouped = groupedMarkerIdSet.has(marker.id);
-    const accentColor = isHovered || isActive ? "lime" : isGrouped ? "#ff6b6b" : "#00FFFF";
+    const accentColor = isHovered || isActive ? "lime" : "#00FFFF";
     const blockBackground = isHovered || isActive
       ? "rgba(0,255,0,0.08)"
-      : isGrouped
-        ? "rgba(255,75,75,0.12)"
-        : "rgba(0,229,255,0.08)";
+      : "rgba(0,229,255,0.08)";
 
     return (
       <div key={marker.id}>
@@ -45,7 +45,17 @@ export function DotLayer({
           role="button"
           tabIndex={interactionLocked ? -1 : 0}
           aria-label={`Marker ${marker.id} block`}
-          onMouseDown={interactionLocked ? undefined : (event) => event.stopPropagation()}
+          onMouseDown={
+            interactionLocked
+              ? undefined
+              : (event) => {
+                  event.stopPropagation();
+                  onBlockDragStart(marker.id, {
+                    clientX: event.clientX,
+                    clientY: event.clientY,
+                  });
+                }
+          }
           onClick={
             interactionLocked
               ? undefined
@@ -78,37 +88,35 @@ export function DotLayer({
             boxShadow:
               isHovered || isActive
                 ? "0 0 0 1px rgba(0,255,0,0.55), 0 0 18px rgba(0,255,0,0.35)"
-                : isGrouped
-                  ? "0 0 0 1px rgba(255,107,107,0.55), 0 0 18px rgba(255,75,75,0.25)"
-                  : "none",
+                : "none",
             zIndex: isActive ? 14 : 11,
-            cursor: interactionLocked ? "default" : "pointer",
+            cursor: interactionLocked ? "default" : "move",
             pointerEvents: blockHoverEnabled ? "auto" : "none",
           }}
         >
-          <span
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "50%",
-              transform: "translate(-50%, -50%)",
-              color: accentColor,
-              fontSize: "14px",
-              fontWeight: 700,
-              lineHeight: 1,
-              fontVariantNumeric: "tabular-nums",
-              textShadow:
-                isHovered || isActive
-                  ? "0 0 8px rgba(0,255,0,0.85)"
-                  : isGrouped
-                    ? "0 0 8px rgba(255,75,75,0.55)"
+          {showMarkerLabels && (
+            <span
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                transform: "translate(-50%, -50%)",
+                color: accentColor,
+                fontSize: "14px",
+                fontWeight: 700,
+                lineHeight: 1,
+                fontVariantNumeric: "tabular-nums",
+                textShadow:
+                  isHovered || isActive
+                    ? "0 0 8px rgba(0,255,0,0.85)"
                     : "0 0 2px rgba(255,255,255,0.65)",
-              pointerEvents: "none",
-            }}
-          >
-            {marker.id}
-          </span>
+                pointerEvents: "none",
+              }}
+            >
+              {marker.id}
+            </span>
+          )}
           {!interactionLocked &&
             isActive &&
             HANDLE_POSITIONS.map((handle) => (
@@ -187,6 +195,31 @@ export function DotLayer({
                 : "none",
             }}
           />
+          {showMarkerLabels && (
+            <span
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: `${DOT_SIZE + 6}px`,
+                top: 0,
+                transform: `translate(0, -50%) scale(${1 / zoomScale})`,
+                transformOrigin: "left center",
+                color: accentColor,
+                fontSize: "13px",
+                fontWeight: 700,
+                lineHeight: 1,
+                fontVariantNumeric: "tabular-nums",
+                whiteSpace: "nowrap",
+                textShadow:
+                  isHovered || isActive
+                    ? "0 0 8px rgba(0,255,0,0.85)"
+                    : "0 0 2px rgba(255,255,255,0.65)",
+                pointerEvents: "none",
+              }}
+            >
+              {marker.id}
+            </span>
+          )}
         </button>
       </div>
     );
