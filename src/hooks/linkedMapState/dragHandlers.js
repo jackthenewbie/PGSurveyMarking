@@ -1,4 +1,5 @@
 import { MIN_BLOCK_SIZE, MIN_GROUP_SPACING } from "../../constants"
+import { blockSizeFromPixels, hasStageSize } from "../../utils/blockSize"
 import { clamp } from "../../utils/math"
 import { getPercentPoint } from "../../utils/points"
 import { applyGroupLayouts, getGroupAdjustedForResizedMarker } from "./groupLayouts"
@@ -18,6 +19,7 @@ export function createDragHandlers({
   setGroupSpacing,
   setGroups,
   setMarkers,
+  stageSize,
   spacingDragState,
 }) {
   function handleMouseMove(event) {
@@ -26,21 +28,36 @@ export function createDragHandlers({
       if (!marker) return
 
       const point = getPercentPoint(event)
-      const horizontalSize = Math.abs(point.x - marker.block.x) * 2
-      const verticalSize = Math.abs(point.y - marker.block.y) * 2
+      const horizontalSize = hasStageSize(stageSize)
+        ? (Math.abs(point.x - marker.block.x) / 100) * stageSize.width * 2
+        : Math.abs(point.x - marker.block.x) * 2
+      const verticalSize = hasStageSize(stageSize)
+        ? (Math.abs(point.y - marker.block.y) / 100) * stageSize.height * 2
+        : Math.abs(point.y - marker.block.y) * 2
+      const minBlockSide = hasStageSize(stageSize)
+        ? Math.max(
+            (MIN_BLOCK_SIZE.width / 100) * stageSize.width,
+            (MIN_BLOCK_SIZE.height / 100) * stageSize.height
+          )
+        : Math.max(MIN_BLOCK_SIZE.width, MIN_BLOCK_SIZE.height)
+      const maxBlockSide = hasStageSize(stageSize)
+        ? Math.min(stageSize.width, stageSize.height)
+        : 100
       const nextSideLength = clamp(
         resizeState.affectsX && resizeState.affectsY
           ? Math.max(horizontalSize, verticalSize)
           : resizeState.affectsX
             ? horizontalSize
             : verticalSize,
-        Math.max(MIN_BLOCK_SIZE.width, MIN_BLOCK_SIZE.height),
-        100
+        minBlockSide,
+        maxBlockSide
       )
-      const nextBlockSize = {
-        width: nextSideLength,
-        height: nextSideLength,
-      }
+      const nextBlockSize = hasStageSize(stageSize)
+        ? blockSizeFromPixels(nextSideLength, stageSize)
+        : {
+            width: nextSideLength,
+            height: nextSideLength,
+          }
       const resizedGroups = groups.map((group) =>
         getGroupAdjustedForResizedMarker(
           group,

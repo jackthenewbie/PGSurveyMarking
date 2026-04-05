@@ -1,5 +1,11 @@
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { DEFAULT_BLOCK_SIZE, DEFAULT_GROUP_SPACING, MIN_ZOOM_SCALE } from "../constants"
+import { normalizeSquareBlockSize } from "../utils/blockSize"
+import {
+  clearPersistedAnnotationState,
+  loadPersistedAnnotationState,
+  savePersistedAnnotationState,
+} from "../utils/browserStorage"
 import { createDragHandlers } from "./linkedMapState/dragHandlers"
 import { flattenGroupedMarkerIds } from "./linkedMapState/groupLayouts"
 import { createAnnotationModeActions } from "./linkedMapState/interactionModes"
@@ -13,6 +19,8 @@ import { useViewport } from "./useViewport"
 export function useLinkedMapState() {
   const nextPathIdRef = useRef(1)
   const nextGroupIdRef = useRef(1)
+  const hasLoadedPersistedStateRef = useRef(false)
+  const skipNextPersistenceRef = useRef(true)
   const viewport = useViewport()
 
   const [pendingPoint, setPendingPoint] = useState(null)
@@ -55,12 +63,70 @@ export function useLinkedMapState() {
     setZoomOrigin,
     setZoomScale,
   })
-  const source = useLinkedMapSource({ resetAnnotationState: resetters.resetAnnotationState })
+  const source = useLinkedMapSource({
+    clearSavedAnnotationState: clearPersistedAnnotationState,
+    resetAnnotationState: resetters.resetAnnotationState,
+  })
   const stageSize = useMemo(() => {
     if (!source.surfaceSize.width || !source.surfaceSize.height) return DEFAULT_SURFACE_SIZE
     const scale = Math.min(viewport.width / source.surfaceSize.width, viewport.height / source.surfaceSize.height)
     return { width: Math.round(source.surfaceSize.width * scale), height: Math.round(source.surfaceSize.height * scale) }
   }, [source.surfaceSize, viewport])
+
+  useEffect(() => {
+    const persisted = loadPersistedAnnotationState()
+    hasLoadedPersistedStateRef.current = true
+
+    if (!persisted) {
+      skipNextPersistenceRef.current = false
+      return
+    }
+
+    resetters.clearTransientState()
+    setMarkers(persisted.markers)
+    setGroups(persisted.groups)
+    setPaths(persisted.paths)
+    setBlockSize(persisted.blockSize)
+    setGroupSpacing(persisted.groupSpacing)
+    nextPathIdRef.current =
+      persisted.paths.reduce((maxPathId, path) => Math.max(maxPathId, path.id ?? 0), 0) + 1
+    nextGroupIdRef.current =
+      persisted.groups.reduce((maxGroupId, group) => Math.max(maxGroupId, group.id ?? 0), 0) + 1
+  }, [])
+
+  useEffect(() => {
+    if (!stageSize.width || !stageSize.height) return
+
+    setBlockSize((current) => {
+      const next = normalizeSquareBlockSize(current, stageSize)
+
+      if (
+        Math.abs(next.width - current.width) < 0.0001 &&
+        Math.abs(next.height - current.height) < 0.0001
+      ) {
+        return current
+      }
+
+      return next
+    })
+  }, [stageSize.height, stageSize.width])
+
+  useEffect(() => {
+    if (!hasLoadedPersistedStateRef.current) return
+    if (skipNextPersistenceRef.current) {
+      skipNextPersistenceRef.current = false
+      return
+    }
+
+    savePersistedAnnotationState({
+      blockSize,
+      groupSpacing,
+      groups,
+      markers,
+      paths,
+    })
+  }, [blockSize, groupSpacing, groups, markers, paths])
+
   const modeActions = createAnnotationModeActions({
     groupingMode,
     groupSpacing,
@@ -144,6 +210,7 @@ export function useLinkedMapState() {
     setGroupSpacing,
     setGroups,
     setMarkers,
+    stageSize,
     spacingDragState,
   })
   const persistenceActions = createPersistenceActions({

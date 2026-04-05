@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react"
 export const DEFAULT_MODE = "screenshot"
 export const DEFAULT_SURFACE_SIZE = { width: 0, height: 0 }
 
-export function useLinkedMapSource({ resetAnnotationState }) {
+export function useLinkedMapSource({ clearSavedAnnotationState, resetAnnotationState }) {
   const blobRef = useRef(null)
   const streamRef = useRef(null)
   const sourceRequestIdRef = useRef(0)
@@ -48,12 +48,16 @@ export function useLinkedMapSource({ resetAnnotationState }) {
     return sourceRequestIdRef.current
   }
 
-  function clearSource() {
+  function clearSource({ resetAnnotations = true } = {}) {
     nextSourceRequestId()
     disposeCurrentMedia()
     setMediaSource(null)
     setSurfaceSize(DEFAULT_SURFACE_SIZE)
-    resetAnnotationState()
+
+    if (resetAnnotations) {
+      clearSavedAnnotationState()
+      resetAnnotationState()
+    }
   }
 
   function updateSurfaceSize(width, height) {
@@ -65,7 +69,7 @@ export function useLinkedMapSource({ resetAnnotationState }) {
 
   function changeMode(nextMode) {
     if (nextMode === mode) return
-    clearSource()
+    clearSource({ resetAnnotations: false })
     setMode(nextMode)
   }
 
@@ -82,11 +86,12 @@ export function useLinkedMapSource({ resetAnnotationState }) {
       }
 
       disposeCurrentMedia()
+      clearSavedAnnotationState()
+      resetAnnotationState()
       blobRef.current = url
       setMode("screenshot")
       setMediaSource({ kind: "image", src: url })
       setSurfaceSize({ width: image.naturalWidth, height: image.naturalHeight })
-      resetAnnotationState()
     }
     image.onerror = () => {
       URL.revokeObjectURL(url)
@@ -127,17 +132,18 @@ export function useLinkedMapSource({ resetAnnotationState }) {
     streamRef.current = stream
     videoTrack.onended = () => {
       if (streamRef.current !== stream) return
-      clearSource()
+      clearSource({ resetAnnotations: false })
     }
 
     const settings = videoTrack.getSettings()
+    clearSavedAnnotationState()
+    resetAnnotationState()
     setMode("stream")
     setMediaSource({ kind: "stream", stream })
     setSurfaceSize({
       width: Number(settings.width) || 0,
       height: Number(settings.height) || 0,
     })
-    resetAnnotationState()
   }
 
   return {
