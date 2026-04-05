@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { KEYBOARD_SHORTCUTS } from "../hooks/linkedMapState/useKeyboardShortcuts";
 
 export function Toolbar({
   groupingMode,
@@ -22,7 +23,10 @@ export function Toolbar({
   onToggleSelectMode,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isShortcutHelpPinned, setIsShortcutHelpPinned] = useState(false);
+  const [isShortcutHelpHovered, setIsShortcutHelpHovered] = useState(false);
   const isScreenshotMode = mode === "screenshot";
+  const isShortcutHelpOpen = isShortcutHelpPinned || isShortcutHelpHovered;
 
   return (
     <div
@@ -37,17 +41,45 @@ export function Toolbar({
         gap: 6,
       }}
     >
-      <button
-        type="button"
-        aria-label={isOpen ? "Collapse toolbar" : "Expand toolbar"}
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen((current) => !current)}
-        style={menuButtonStyle}
-      >
-        <span style={menuLineStyle} />
-        <span style={menuLineStyle} />
-        <span style={menuLineStyle} />
-      </button>
+      <div style={toolbarControlsRowStyle}>
+        <button
+          type="button"
+          aria-label={isOpen ? "Collapse toolbar" : "Expand toolbar"}
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((current) => !current)}
+          style={menuButtonStyle}
+        >
+          <span style={menuLineStyle} />
+          <span style={menuLineStyle} />
+          <span style={menuLineStyle} />
+        </button>
+        <div
+          style={shortcutHelpWrapperStyle}
+          onMouseEnter={() => setIsShortcutHelpHovered(true)}
+          onMouseLeave={() => setIsShortcutHelpHovered(false)}
+        >
+          <button
+            type="button"
+            aria-label="Show keyboard shortcuts"
+            aria-expanded={isShortcutHelpOpen}
+            onClick={() => setIsShortcutHelpPinned((current) => !current)}
+            style={shortcutHelpButtonStyle}
+          >
+            ?
+          </button>
+          {isShortcutHelpOpen && (
+            <div style={shortcutHelpPanelStyle}>
+              <div style={shortcutHelpTitleStyle}>Shortcuts</div>
+              {KEYBOARD_SHORTCUTS.map((shortcut) => (
+                <div key={shortcut.key} style={shortcutRowStyle}>
+                  <span style={shortcutKeyStyle}>{shortcut.key}</span>
+                  <span style={shortcutDescriptionStyle}>{shortcut.description}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
       {isOpen && (
         <div style={panelStyle}>
           <div style={modeGroupStyle}>
@@ -96,7 +128,7 @@ export function Toolbar({
                 : buttonStyle("1px solid white", "rgba(0,0,0,0.7)", "white")
             }
           >
-            {selectMode ? "✔ Select to draw optimize path" : "⬚ Select to draw optimize path"}
+            {selectMode ? "✔ Selecting to draw optimize path" : "⬚ Select to draw optimize path"}
           </button>
           <button
             type="button"
@@ -107,7 +139,7 @@ export function Toolbar({
                 : buttonStyle("1px solid white", "rgba(0,0,0,0.7)", "white")
             }
           >
-            {groupingMode ? "✔ Grouping block" : "⬚ Grouping block"}
+            {groupingMode ? "✔ Grouping block" : "⬚ Group block"}
           </button>
           <button
             type="button"
@@ -175,6 +207,12 @@ function buttonStyle(border, background, color) {
   };
 }
 
+const toolbarControlsRowStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 6,
+};
+
 const panelStyle = {
   display: "flex",
   flexDirection: "column",
@@ -211,6 +249,68 @@ const menuLineStyle = {
   width: "100%",
   height: "2px",
   background: "white",
+};
+
+const shortcutHelpWrapperStyle = {
+  position: "relative",
+};
+
+const shortcutHelpButtonStyle = {
+  width: "42px",
+  height: "42px",
+  padding: 0,
+  border: "1px solid rgba(255,255,255,0.85)",
+  background: "rgba(0,0,0,0.7)",
+  color: "white",
+  cursor: "pointer",
+  fontSize: "20px",
+  lineHeight: 1,
+};
+
+const shortcutHelpPanelStyle = {
+  position: "absolute",
+  top: "calc(100% + 6px)",
+  left: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: 8,
+  width: "280px",
+  padding: 10,
+  border: "1px solid rgba(255,255,255,0.2)",
+  background: "rgba(10,10,10,0.95)",
+  color: "white",
+};
+
+const shortcutHelpTitleStyle = {
+  fontSize: "12px",
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: "#00e5ff",
+};
+
+const shortcutRowStyle = {
+  display: "grid",
+  gridTemplateColumns: "42px 1fr",
+  gap: 8,
+  alignItems: "start",
+};
+
+const shortcutKeyStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: "24px",
+  padding: "2px 6px",
+  border: "1px solid rgba(255,255,255,0.35)",
+  background: "rgba(255,255,255,0.06)",
+  fontSize: "12px",
+};
+
+const shortcutDescriptionStyle = {
+  fontSize: "12px",
+  lineHeight: 1.35,
+  color: "rgba(255,255,255,0.88)",
 };
 
 const inactiveModeButtonStyle = {

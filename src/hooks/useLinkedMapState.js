@@ -7,7 +7,7 @@ import { createAnnotationResetters } from "./linkedMapState/annotationResets"
 import { createPersistenceActions } from "./linkedMapState/persistence"
 import { createPointerHandlers } from "./linkedMapState/pointerHandlers"
 import { DEFAULT_SURFACE_SIZE, useLinkedMapSource } from "./linkedMapState/sourceState"
-import { useMarkerDeletionShortcut } from "./linkedMapState/useMarkerDeletionShortcut"
+import { useKeyboardShortcuts } from "./linkedMapState/useKeyboardShortcuts"
 import { useViewport } from "./useViewport"
 
 export function useLinkedMapState() {
@@ -56,23 +56,6 @@ export function useLinkedMapState() {
     setZoomScale,
   })
   const source = useLinkedMapSource({ resetAnnotationState: resetters.resetAnnotationState })
-  useMarkerDeletionShortcut({
-    blockSize,
-    groupSpacing,
-    groups,
-    hoveredMarkerId,
-    markers,
-    setActiveMarkerId,
-    setDragBlockState,
-    setDragCurrent,
-    setDragStart,
-    setGroups,
-    setHoveredMarkerId,
-    setMarkers,
-    setPendingPoint,
-    setResizeState,
-    setSpacingDragState,
-  })
   const stageSize = useMemo(() => {
     if (!source.surfaceSize.width || !source.surfaceSize.height) return DEFAULT_SURFACE_SIZE
     const scale = Math.min(viewport.width / source.surfaceSize.width, viewport.height / source.surfaceSize.height)
@@ -96,6 +79,26 @@ export function useLinkedMapState() {
     setSelectMode,
     setSpacingDragState,
     spacingDragState,
+  })
+  useKeyboardShortcuts({
+    activeMarkerId,
+    blockSize,
+    groupSpacing,
+    groups,
+    hoveredMarkerId,
+    markers,
+    setActiveMarkerId,
+    setDragBlockState,
+    setDragCurrent,
+    setDragStart,
+    setGroupingMode,
+    setGroups,
+    setHoveredMarkerId,
+    setMarkers,
+    setPendingPoint,
+    setResizeState,
+    setSpacingDragState,
+    toggleGroupingMode: modeActions.toggleGroupingMode,
   })
   const pointerHandlers = createPointerHandlers({
     activeMarkerId,
