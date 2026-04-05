@@ -1,5 +1,6 @@
 export function createAnnotationModeActions({
   captureGestureStart,
+  focusTrackingMode,
   groupingMode,
   groupSpacing,
   groups,
@@ -10,6 +11,7 @@ export function createAnnotationModeActions({
   setDragBlockState,
   setDragCurrent,
   setDragStart,
+  setFocusTrackingMode,
   setGroupingMode,
   setGroups,
   setPendingPoint,
@@ -29,24 +31,34 @@ export function createAnnotationModeActions({
   }
 
   function toggleSelectMode() {
+    if (focusTrackingMode) return
     setSelectMode((current) => !current)
     setGroupingMode(false)
     clearActiveInteraction()
   }
 
   function toggleGroupingMode() {
+    if (focusTrackingMode) return
     setGroupingMode((current) => !current)
     setSelectMode(false)
     clearActiveInteraction()
   }
 
+  function toggleFocusTrackingMode() {
+    setFocusTrackingMode((current) => !current)
+    setSelectMode(false)
+    setGroupingMode(false)
+    clearActiveInteraction()
+  }
+
   function activateMarker(markerId) {
-    if (selectMode || groupingMode) return
+    if (focusTrackingMode || selectMode || groupingMode) return
     setPendingPoint(null)
     setActiveMarkerId(markerId)
   }
 
   function handleResizeStart(markerId, handle) {
+    if (focusTrackingMode) return
     setPendingPoint(null)
     setActiveMarkerId(markerId)
     setDragBlockState(null)
@@ -59,7 +71,7 @@ export function createAnnotationModeActions({
   }
 
   function handleSpacingDragStart(axis, startPoint) {
-    if (groups.length === 0) return
+    if (focusTrackingMode || groups.length === 0) return
     setPendingPoint(null)
     setActiveMarkerId(null)
     setDragBlockState(null)
@@ -79,7 +91,7 @@ export function createAnnotationModeActions({
   }
 
   function handleBlockDragStart(markerId, startPoint) {
-    if (selectMode || groupingMode || resizeState || spacingDragState) return
+    if (focusTrackingMode || selectMode || groupingMode || resizeState || spacingDragState) return
 
     const marker = markers.find((current) => current.id === markerId)
     if (!marker) return
@@ -116,6 +128,7 @@ export function createAnnotationModeActions({
     handleResizeStart,
     handleSpacingDragStart,
     setActiveMarkerId: activateMarker,
+    toggleFocusTrackingMode,
     toggleGroupingMode,
     toggleSelectMode,
   }

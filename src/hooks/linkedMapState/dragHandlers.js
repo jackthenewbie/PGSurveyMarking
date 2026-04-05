@@ -9,6 +9,7 @@ export function createDragHandlers({
   blockSize,
   dragBlockState,
   dragStart,
+  focusTrackingMode,
   groupSpacing,
   groupingMode,
   groups,
@@ -24,6 +25,7 @@ export function createDragHandlers({
   spacingDragState,
 }) {
   function handleMouseMove(event) {
+    if (focusTrackingMode) return
     if (resizeState) {
       const marker = markers.find((current) => current.id === resizeState.markerId)
       if (!marker) return

@@ -11,6 +11,7 @@ export function createPointerHandlers({
   dragCurrent,
   dragStart,
   finishGesture,
+  focusTrackingMode,
   groupSpacing,
   groupingMode,
   groups,
@@ -37,6 +38,7 @@ export function createPointerHandlers({
   pushHistorySnapshot,
 }) {
   function handleStageClick(event) {
+    if (focusTrackingMode) return
     if (selectMode || groupingMode || resizeState || spacingDragState) return
 
     const { x, y } = getPercentPoint(event)
@@ -64,6 +66,7 @@ export function createPointerHandlers({
   }
 
   function handleMouseDown(event) {
+    if (focusTrackingMode) return
     if (!selectMode && !groupingMode) return
     event.preventDefault()
     const point = getPercentPoint(event)
@@ -72,6 +75,7 @@ export function createPointerHandlers({
   }
 
   function handleMouseUp() {
+    if (focusTrackingMode) return
     if (resizeState) {
       finishGesture()
       setResizeState(null)

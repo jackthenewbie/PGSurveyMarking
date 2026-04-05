@@ -2,6 +2,7 @@ import { useState } from "react";
 import { KEYBOARD_SHORTCUTS } from "../hooks/linkedMapState/useKeyboardShortcuts";
 
 export function Toolbar({
+  focusTrackingMode,
   groupingMode,
   hasCoordinates,
   hasGroups,
@@ -16,6 +17,8 @@ export function Toolbar({
   onClearGroups,
   onClearPaths,
   onChangeMode,
+  onToggleFocusTrackingMode,
+  onResetSavedSettings,
   onSelectImage,
   onStartSharing,
   onToggleGroupingMode,
@@ -118,6 +121,24 @@ export function Toolbar({
             style={buttonStyle("1px solid white", "rgba(0,0,0,0.7)", "white")}
           >
             Restore coords
+          </button>
+          <button
+            type="button"
+            onClick={onToggleFocusTrackingMode}
+            style={
+              focusTrackingMode
+                ? buttonStyle("1px solid #ffd54a", "rgba(255,213,74,0.16)", "#ffd54a")
+                : buttonStyle("1px solid white", "rgba(0,0,0,0.7)", "white")
+            }
+          >
+            {focusTrackingMode ? "✔ Focus tracking" : "⬚ Focus tracking"}
+          </button>
+          <button
+            type="button"
+            onClick={onResetSavedSettings}
+            style={buttonStyle("1px solid #ff3355", "rgba(255,32,64,0.2)", "#ff9aaa")}
+          >
+            Reset saved settings
           </button>
           <button
             type="button"

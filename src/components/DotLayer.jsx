@@ -14,6 +14,7 @@ const HANDLE_POSITIONS = [
 export function DotLayer({
   activeMarkerId,
   blockSize,
+  focusTrackingMode,
   groupedMarkerIds,
   groupingMode,
   hoveredMarkerId,
@@ -26,7 +27,7 @@ export function DotLayer({
   showMarkerLabels,
   zoomScale,
 }) {
-  const interactionLocked = selectMode || groupingMode;
+  const interactionLocked = focusTrackingMode || selectMode || groupingMode;
   const blockHoverEnabled = !selectMode;
   const groupedMarkerIdSet = new Set(groupedMarkerIds);
 

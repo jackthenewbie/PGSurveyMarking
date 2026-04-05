@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { DEFAULT_BLOCK_SIZE, DEFAULT_GROUP_SPACING, MIN_ZOOM_SCALE } from "../constants"
 import { normalizeSquareBlockSize } from "../utils/blockSize"
 import {
+  clearPersistedAnnotationSettings,
   clearPersistedAnnotationState,
   loadPersistedAnnotationSettings,
   loadPersistedAnnotationState,
@@ -74,6 +75,7 @@ export function useLinkedMapState() {
   const [groups, setGroups] = useState([])
   const [selectMode, setSelectMode] = useState(false)
   const [groupingMode, setGroupingMode] = useState(false)
+  const [focusTrackingMode, setFocusTrackingMode] = useState(false)
 
   const [dragStart, setDragStart] = useState(null)
   const [dragCurrent, setDragCurrent] = useState(null)
@@ -169,6 +171,7 @@ export function useLinkedMapState() {
     setDragBlockState,
     setDragCurrent,
     setDragStart,
+    setFocusTrackingMode,
     setGroupSpacing,
     setGroupingMode,
     setGroups,
@@ -184,6 +187,13 @@ export function useLinkedMapState() {
   })
   const resetAnnotationStateAndHistory = () => {
     clearHistory()
+    resetters.resetAnnotationState()
+  }
+  const resetSavedSettings = () => {
+    clearHistory()
+    clearPersistedAnnotationState()
+    clearPersistedAnnotationSettings()
+    persistedSettingsRef.current = null
     resetters.resetAnnotationState()
   }
   const source = useLinkedMapSource({
@@ -276,6 +286,7 @@ export function useLinkedMapState() {
 
   const modeActions = createAnnotationModeActions({
     captureGestureStart,
+    focusTrackingMode,
     groupingMode,
     groupSpacing,
     groups,
@@ -286,6 +297,7 @@ export function useLinkedMapState() {
     setDragBlockState,
     setDragCurrent,
     setDragStart,
+    setFocusTrackingMode,
     setGroupingMode,
     setGroups,
     setPendingPoint,
@@ -300,6 +312,7 @@ export function useLinkedMapState() {
     cancelGesture,
     canRedo: redoStackRef.current.length > 0,
     canUndo: undoStackRef.current.length > 0,
+    focusTrackingMode,
     groupSpacing,
     groups,
     hoveredMarkerId,
@@ -319,9 +332,11 @@ export function useLinkedMapState() {
     setGroups,
     setHoveredMarkerId,
     setMarkers,
+    setPaths,
     setPendingPoint,
     setResizeState,
     setSpacingDragState,
+    toggleSelectMode: modeActions.toggleSelectMode,
     toggleGroupingMode: modeActions.toggleGroupingMode,
   })
   const pointerHandlers = createPointerHandlers({
@@ -331,6 +346,7 @@ export function useLinkedMapState() {
     dragCurrent,
     dragStart,
     finishGesture,
+    focusTrackingMode,
     groupSpacing,
     groupingMode,
     groups,
@@ -363,6 +379,7 @@ export function useLinkedMapState() {
     blockSize,
     dragBlockState,
     dragStart,
+    focusTrackingMode,
     groupSpacing,
     groupingMode,
     groups,
@@ -435,6 +452,7 @@ export function useLinkedMapState() {
     downloadCoordinates: persistenceActions.downloadCoordinates,
     dragCurrent,
     dragStart,
+    focusTrackingMode,
     groupSpacing,
     groupedMarkerIds: flattenGroupedMarkerIds(groups),
     groups, groupingMode,
@@ -454,12 +472,14 @@ export function useLinkedMapState() {
     paths,
     pendingPoint,
     restoreCoordinates,
+    resetSavedSettings,
     selectMode,
     setActiveMarkerId: modeActions.setActiveMarkerId,
     setHoveredMarkerId,
     showMarkerLabels,
     stageSize,
     startScreenShare: source.startScreenShare,
+    toggleFocusTrackingMode: modeActions.toggleFocusTrackingMode,
     toggleGroupingMode: modeActions.toggleGroupingMode,
     toggleMarkerLabels: () => setShowMarkerLabels((current) => !current),
     toggleSelectMode: modeActions.toggleSelectMode,

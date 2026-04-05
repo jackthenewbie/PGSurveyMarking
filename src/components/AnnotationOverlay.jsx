@@ -9,6 +9,7 @@ export function AnnotationOverlay({
   blockSize,
   dragCurrent,
   dragStart,
+  focusTrackingMode,
   groupSpacing,
   groupedMarkerIds,
   groups,
@@ -50,6 +51,7 @@ export function AnnotationOverlay({
       <DotLayer
         activeMarkerId={activeMarkerId}
         blockSize={blockSize}
+        focusTrackingMode={focusTrackingMode}
         groupedMarkerIds={groupedMarkerIds}
         groupingMode={groupingMode}
         hoveredMarkerId={hoveredMarkerId}

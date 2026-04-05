@@ -30,6 +30,7 @@ export function createAnnotationResetters({
   setDragBlockState,
   setDragCurrent,
   setDragStart,
+  setFocusTrackingMode,
   setGroupSpacing,
   setGroupingMode,
   setGroups,
@@ -52,6 +53,7 @@ export function createAnnotationResetters({
     setGroups([])
     setSelectMode(false)
     setGroupingMode(false)
+    setFocusTrackingMode(false)
     setPaths([])
     setZoomScale(MIN_ZOOM_SCALE)
     setZoomOrigin(DEFAULT_ZOOM_ORIGIN)
@@ -74,6 +76,7 @@ export function createAnnotationResetters({
     setHoveredMarkerId(null)
     setGroups([])
     setPaths([])
+    setFocusTrackingMode(false)
     clearInteractionState({
       setPendingPoint,
       setActiveMarkerId,
@@ -89,6 +92,7 @@ export function createAnnotationResetters({
     setMarkers([])
     setHoveredMarkerId(null)
     setGroups([])
+    setFocusTrackingMode(false)
     clearInteractionState({
       setPendingPoint,
       setActiveMarkerId,

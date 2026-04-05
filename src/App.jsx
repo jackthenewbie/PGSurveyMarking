@@ -54,6 +54,7 @@ export default function LinkedMapMarkerSite() {
       ) : (
         <>
           <Toolbar
+            focusTrackingMode={state.focusTrackingMode}
             groupingMode={state.groupingMode}
             hasCoordinates={state.markers.length > 0}
             hasGroups={state.groups.length > 0}
@@ -67,7 +68,9 @@ export default function LinkedMapMarkerSite() {
             onClearCoordinatesAndPaths={state.clearCoordinatesAndPaths}
             onClearGroups={state.clearGroups}
             onClearPaths={state.clearPaths}
+            onResetSavedSettings={state.resetSavedSettings}
             onChangeMode={state.changeMode}
+            onToggleFocusTrackingMode={state.toggleFocusTrackingMode}
             onSelectImage={() => inputRef.current?.click()}
             onStartSharing={handleStartSharing}
             onToggleGroupingMode={state.toggleGroupingMode}
@@ -79,6 +82,7 @@ export default function LinkedMapMarkerSite() {
             blockSize={state.blockSize}
             dragCurrent={state.dragCurrent}
             dragStart={state.dragStart}
+            focusTrackingMode={state.focusTrackingMode}
             groupSpacing={state.groupSpacing}
             groupedMarkerIds={state.groupedMarkerIds}
             groups={state.groups}

@@ -6,6 +6,7 @@ export function MapStage({
   blockSize,
   dragCurrent,
   dragStart,
+  focusTrackingMode,
   groupSpacing,
   groupedMarkerIds,
   groups,
@@ -66,6 +67,7 @@ export function MapStage({
             blockSize={blockSize}
             dragCurrent={dragCurrent}
             dragStart={dragStart}
+            focusTrackingMode={focusTrackingMode}
             groupSpacing={groupSpacing}
             groupedMarkerIds={groupedMarkerIds}
             groups={groups}
