@@ -29,8 +29,7 @@ export function UploadScreen({ mode, onChangeMode, onSelectImage, onStartSharing
             Choose a media source
           </strong>
           <span style={{ color: "rgba(255,255,255,0.72)", lineHeight: 1.5 }}>
-            The annotation overlay stays independent from the underlying surface, so marker
-            placement works the same on a screenshot or a live shared window.
+            Choose the Project Gorgon game tab for streaming, or upload a screenshot instead.
           </span>
         </div>
         <div
@@ -55,6 +54,9 @@ export function UploadScreen({ mode, onChangeMode, onSelectImage, onStartSharing
             Live stream mode
           </button>
         </div>
+        <div style={flowIndicatorStyle} aria-hidden="true">
+          <span style={flowArrowStyle}>↓</span>
+        </div>
         <button
           type="button"
           onClick={isScreenshotMode ? onSelectImage : onStartSharing}
@@ -64,8 +66,7 @@ export function UploadScreen({ mode, onChangeMode, onSelectImage, onStartSharing
         </button>
         {!isScreenshotMode && (
           <span style={{ color: "rgba(255,255,255,0.62)", fontSize: "14px", lineHeight: 1.5 }}>
-            Your browser will prompt you to choose a screen, window, or tab with
-            `getDisplayMedia()`.
+            Press F11 to fullscreen the tab for the best experience.
           </span>
         )}
       </div>
@@ -73,12 +74,27 @@ export function UploadScreen({ mode, onChangeMode, onSelectImage, onStartSharing
   );
 }
 
+const flowIndicatorStyle = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  marginTop: "-6px",
+  marginBottom: "-6px",
+};
+
+const flowArrowStyle = {
+  fontSize: "20px",
+  lineHeight: 1,
+  color: "#00e5ff",
+};
+
 const inactiveModeButtonStyle = {
   padding: "12px 14px",
   border: "1px solid rgba(255,255,255,0.2)",
   background: "rgba(255,255,255,0.04)",
   color: "white",
   cursor: "pointer",
+  transition: "border-color 140ms ease, background-color 140ms ease, color 140ms ease",
 };
 
 const activeModeButtonStyle = {
@@ -86,6 +102,7 @@ const activeModeButtonStyle = {
   border: "1px solid #00e5ff",
   background: "rgba(0,229,255,0.12)",
   color: "#00e5ff",
+  boxShadow: "inset 0 -2px 0 rgba(0,229,255,0.45)",
 };
 
 const primaryButtonStyle = {
