@@ -137,13 +137,6 @@ export function Toolbar({
           </button>
           <button
             type="button"
-            onClick={onResetSavedSettings}
-            style={buttonStyle("1px solid #ff3355", "rgba(255,32,64,0.2)", "#ff9aaa")}
-          >
-            Reset saved settings
-          </button>
-          <button
-            type="button"
             onClick={(event) => onToggleSelectMode(event)}
             style={
               selectMode
@@ -222,6 +215,13 @@ export function Toolbar({
               Clear all
             </button>
           )}
+          <button
+            type="button"
+            onClick={onResetSavedSettings}
+            style={buttonStyle("1px solid #ff3355", "rgba(255,32,64,0.2)", "#ff9aaa")}
+          >
+            Reset saved box size and spacing
+          </button>
         </div>
       )}
     </div>
