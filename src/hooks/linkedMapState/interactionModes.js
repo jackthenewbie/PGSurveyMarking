@@ -37,9 +37,7 @@ export function createAnnotationModeActions({
     setSelectMode(nextSelectMode)
     setGroupingMode(false)
     clearActiveInteraction()
-    if (nextSelectMode) {
-      showModeToast?.("Path optimization enabled", event)
-    }
+    showModeToast?.(`Path creation ${nextSelectMode ? "enabled" : "disabled"}`, event)
   }
 
   function toggleGroupingMode(event) {
@@ -48,9 +46,7 @@ export function createAnnotationModeActions({
     setGroupingMode(nextGroupingMode)
     setSelectMode(false)
     clearActiveInteraction()
-    if (nextGroupingMode) {
-      showModeToast?.("Grouping mode enabled", event)
-    }
+    showModeToast?.(`Grouping mode ${nextGroupingMode ? "enabled" : "disabled"}`, event)
   }
 
   function toggleFocusTrackingMode(event) {
@@ -59,9 +55,7 @@ export function createAnnotationModeActions({
     setSelectMode(false)
     setGroupingMode(false)
     clearActiveInteraction()
-    if (nextFocusTrackingMode) {
-      showModeToast?.("Focus tracking enabled", event)
-    }
+    showModeToast?.(`Focus tracking ${nextFocusTrackingMode ? "enabled" : "disabled"}`, event)
   }
 
   function activateMarker(markerId) {

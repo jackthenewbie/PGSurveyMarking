@@ -9,6 +9,7 @@ export function Toolbar({
   hasPaths,
   mode,
   selectMode,
+  showModeNotifications,
   showMarkerLabels,
   onBackupCoordinates,
   onRestoreCoordinates,
@@ -22,6 +23,7 @@ export function Toolbar({
   onSelectImage,
   onStartSharing,
   onToggleGroupingMode,
+  onToggleModeNotifications,
   onToggleMarkerLabels,
   onToggleSelectMode,
 }) {
@@ -172,6 +174,17 @@ export function Toolbar({
             }
           >
             {showMarkerLabels ? "✔ Show marker labels" : "⬚ Show marker labels"}
+          </button>
+          <button
+            type="button"
+            onClick={onToggleModeNotifications}
+            style={
+              showModeNotifications
+                ? buttonStyle("1px solid #9bf06b", "rgba(155,240,107,0.14)", "#9bf06b")
+                : buttonStyle("1px solid white", "rgba(0,0,0,0.7)", "white")
+            }
+          >
+            {showModeNotifications ? "✔ Show mode notifications" : "⬚ Show mode notifications"}
           </button>
           {hasPaths && (
             <button

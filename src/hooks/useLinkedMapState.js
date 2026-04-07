@@ -90,12 +90,15 @@ export function useLinkedMapState() {
     persistedSettingsRef.current?.groupSpacing ?? DEFAULT_GROUP_SPACING
   )
   const [showMarkerLabels, setShowMarkerLabels] = useState(true)
+  const [showModeNotifications, setShowModeNotifications] = useState(true)
   const [resizeState, setResizeState] = useState(null)
   const [spacingDragState, setSpacingDragState] = useState(null)
   const [dragBlockState, setDragBlockState] = useState(null)
   const [modeToast, setModeToast] = useState(null)
 
   const showModeToast = (message, event) => {
+    if (!showModeNotifications) return
+
     const isKeyboardActivated = event?.detail === 0
     const x =
       !isKeyboardActivated && event?.clientX != null ? event.clientX : pointerPositionRef.current.x
@@ -297,6 +300,17 @@ export function useLinkedMapState() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (showModeNotifications || !modeToast) return
+
+    if (modeToastTimerRef.current) {
+      window.clearTimeout(modeToastTimerRef.current)
+      modeToastTimerRef.current = null
+    }
+
+    setModeToast(null)
+  }, [modeToast, showModeNotifications])
 
   useEffect(() => {
     if (!hasLoadedPersistedStateRef.current) return
@@ -526,11 +540,13 @@ export function useLinkedMapState() {
     selectMode,
     setActiveMarkerId: modeActions.setActiveMarkerId,
     setHoveredMarkerId,
+    showModeNotifications,
     showMarkerLabels,
     stageSize,
     startScreenShare: source.startScreenShare,
     toggleFocusTrackingMode: modeActions.toggleFocusTrackingMode,
     toggleGroupingMode: modeActions.toggleGroupingMode,
+    toggleModeNotifications: () => setShowModeNotifications((current) => !current),
     toggleMarkerLabels: () => setShowMarkerLabels((current) => !current),
     toggleSelectMode: modeActions.toggleSelectMode,
     updateSurfaceSize: source.updateSurfaceSize,

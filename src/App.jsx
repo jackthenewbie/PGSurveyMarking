@@ -62,6 +62,7 @@ export default function LinkedMapMarkerSite() {
             hasPaths={state.paths.length > 0}
             mode={state.mode}
             selectMode={state.selectMode}
+            showModeNotifications={state.showModeNotifications}
             showMarkerLabels={state.showMarkerLabels}
             onBackupCoordinates={state.downloadCoordinates}
             onRestoreCoordinates={() => restoreInputRef.current?.click()}
@@ -75,6 +76,7 @@ export default function LinkedMapMarkerSite() {
             onSelectImage={() => inputRef.current?.click()}
             onStartSharing={handleStartSharing}
             onToggleGroupingMode={state.toggleGroupingMode}
+            onToggleModeNotifications={state.toggleModeNotifications}
             onToggleMarkerLabels={state.toggleMarkerLabels}
             onToggleSelectMode={state.toggleSelectMode}
           />
