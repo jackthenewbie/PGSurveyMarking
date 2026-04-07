@@ -1,5 +1,6 @@
 import { DEFAULT_GROUP_SPACING } from "../../constants"
 import { parseCoordinatePairsBackup, serializeCoordinatePairs } from "../../utils/backup"
+import { scaleOverlaySizingToStage } from "../../utils/overlaySizing"
 
 export function createPersistenceActions({
   blockSize,
@@ -7,13 +8,14 @@ export function createPersistenceActions({
   groupSpacing,
   groups,
   markers,
+  stageSize,
   setBlockSize,
   setGroupSpacing,
   setGroups,
   restoreRestoredMarkers,
 }) {
   function downloadCoordinates() {
-    const blob = new Blob([serializeCoordinatePairs(markers, blockSize, groupSpacing, groups)], {
+    const blob = new Blob([serializeCoordinatePairs(markers, blockSize, groupSpacing, groups, stageSize)], {
       type: "application/json",
     })
     const url = URL.createObjectURL(blob)
@@ -26,10 +28,18 @@ export function createPersistenceActions({
 
   function restoreCoordinates(text) {
     const restored = parseCoordinatePairsBackup(text)
+    const scaledSizing = scaleOverlaySizingToStage({
+      blockSize: restored.blockSize,
+      groupSpacing: restored.groupSpacing ?? DEFAULT_GROUP_SPACING,
+      referenceStageSize: restored.referenceStageSize,
+      targetStageSize: stageSize,
+    })
+
     restoreRestoredMarkers(
       {
         ...restored,
-        groupSpacing: restored.groupSpacing ?? DEFAULT_GROUP_SPACING,
+        blockSize: scaledSizing.blockSize,
+        groupSpacing: scaledSizing.groupSpacing,
       },
       clearTransientState,
       setGroupSpacing,

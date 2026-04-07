@@ -17,7 +17,30 @@ function normalizeNonNegativeInteger(value, label) {
   return value;
 }
 
-export function serializeCoordinatePairs(markers, blockSize, groupSpacing, groups = []) {
+function normalizeSurfaceDimension(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    throw new Error(`Invalid ${label} in backup file.`);
+  }
+
+  return value;
+}
+
+function normalizeReferenceStageSize(referenceStageSize) {
+  if (!referenceStageSize) return undefined;
+
+  return {
+    width: normalizeSurfaceDimension(referenceStageSize.width, "reference stage width"),
+    height: normalizeSurfaceDimension(referenceStageSize.height, "reference stage height"),
+  };
+}
+
+export function serializeCoordinatePairs(
+  markers,
+  blockSize,
+  groupSpacing,
+  groups = [],
+  referenceStageSize
+) {
   return JSON.stringify(
     {
       version: 4,
@@ -26,6 +49,7 @@ export function serializeCoordinatePairs(markers, blockSize, groupSpacing, group
         height: normalizeCoordinate(blockSize?.height ?? DEFAULT_BLOCK_SIZE.height, "block height"),
       },
       groupSpacing: normalizeCoordinate(groupSpacing ?? DEFAULT_GROUP_SPACING, "group spacing"),
+      referenceStageSize: normalizeReferenceStageSize(referenceStageSize),
       groups: groups.map((group, groupIndex) => ({
         id: normalizeNonNegativeInteger(group?.id ?? groupIndex + 1, `group ${groupIndex + 1} id`),
         anchor: {
@@ -80,6 +104,7 @@ export function parseCoordinatePairsBackup(text) {
         height: normalizeCoordinate(parsed?.blockSize?.height ?? DEFAULT_BLOCK_SIZE.height, "block height"),
       },
       groupSpacing: normalizeCoordinate(parsed?.groupSpacing ?? DEFAULT_GROUP_SPACING, "group spacing"),
+      referenceStageSize: normalizeReferenceStageSize(parsed?.referenceStageSize),
       groups: Array.isArray(parsed?.groups)
         ? parsed.groups
             .map((group, groupIndex) => ({
@@ -125,6 +150,7 @@ export function parseCoordinatePairsBackup(text) {
   return {
     blockSize: { ...DEFAULT_BLOCK_SIZE },
     groupSpacing: DEFAULT_GROUP_SPACING,
+    referenceStageSize: undefined,
     groups: [],
     markers: rawPairs.map((rawPair, pairIndex) => {
       if (!Array.isArray(rawPair) || rawPair.length !== 2) {

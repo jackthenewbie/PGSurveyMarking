@@ -20,3 +20,11 @@ export function getGroupSpacingPercent(groupSpacing, stageSize, axis) {
 
   return (getGroupSpacingPixels(groupSpacing, stageSize) / axisSize) * 100
 }
+
+export function groupSpacingFromPixels(groupSpacingPixels, stageSize) {
+  if (!hasStageSize(stageSize) || !Number.isFinite(groupSpacingPixels) || groupSpacingPixels <= 0) {
+    return 0
+  }
+
+  return (groupSpacingPixels / Math.min(stageSize.width, stageSize.height)) * 100
+}

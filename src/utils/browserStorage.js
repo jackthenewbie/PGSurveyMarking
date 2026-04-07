@@ -20,6 +20,23 @@ function normalizeNonNegativeInteger(value, label) {
   return value
 }
 
+function normalizeSurfaceDimension(value, label) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    throw new Error(`Invalid ${label} in saved browser state.`)
+  }
+
+  return value
+}
+
+function normalizeReferenceStageSize(referenceStageSize) {
+  if (!referenceStageSize) return undefined
+
+  return {
+    width: normalizeSurfaceDimension(referenceStageSize.width, "reference stage width"),
+    height: normalizeSurfaceDimension(referenceStageSize.height, "reference stage height"),
+  }
+}
+
 function normalizePath(path, pathIndex) {
   return {
     id: normalizeNonNegativeInteger(path?.id ?? pathIndex + 1, `path ${pathIndex + 1} id`),
@@ -36,7 +53,7 @@ function normalizePath(path, pathIndex) {
   }
 }
 
-function serializeAnnotationState({ blockSize, groupSpacing, groups, markers, paths }) {
+function serializeAnnotationState({ blockSize, groupSpacing, groups, markers, paths, referenceStageSize }) {
   return JSON.stringify({
     version: 1,
     blockSize: {
@@ -44,6 +61,7 @@ function serializeAnnotationState({ blockSize, groupSpacing, groups, markers, pa
       height: normalizeCoordinate(blockSize?.height ?? DEFAULT_BLOCK_SIZE.height, "block height"),
     },
     groupSpacing: normalizeCoordinate(groupSpacing ?? DEFAULT_GROUP_SPACING, "group spacing"),
+    referenceStageSize: normalizeReferenceStageSize(referenceStageSize),
     groups: Array.isArray(groups)
       ? groups.map((group, groupIndex) => ({
           id: normalizeNonNegativeInteger(group?.id ?? groupIndex + 1, `group ${groupIndex + 1} id`),
@@ -90,6 +108,7 @@ function parsePersistedAnnotationSettings(text) {
       height: normalizeCoordinate(parsed?.blockSize?.height ?? DEFAULT_BLOCK_SIZE.height, "block height"),
     },
     groupSpacing: normalizeCoordinate(parsed?.groupSpacing ?? DEFAULT_GROUP_SPACING, "group spacing"),
+    referenceStageSize: normalizeReferenceStageSize(parsed?.referenceStageSize),
   }
 }
 
@@ -102,6 +121,7 @@ export function parsePersistedAnnotationState(text) {
       height: normalizeCoordinate(parsed?.blockSize?.height ?? DEFAULT_BLOCK_SIZE.height, "block height"),
     },
     groupSpacing: normalizeCoordinate(parsed?.groupSpacing ?? DEFAULT_GROUP_SPACING, "group spacing"),
+    referenceStageSize: normalizeReferenceStageSize(parsed?.referenceStageSize),
     groups: Array.isArray(parsed?.groups)
       ? parsed.groups
           .map((group, groupIndex) => ({
@@ -187,7 +207,7 @@ export function loadPersistedAnnotationSettings() {
   }
 }
 
-export function savePersistedAnnotationSettings({ blockSize, groupSpacing }) {
+export function savePersistedAnnotationSettings({ blockSize, groupSpacing, referenceStageSize }) {
   if (typeof window === "undefined" || !window.localStorage) return
 
   try {
@@ -200,6 +220,7 @@ export function savePersistedAnnotationSettings({ blockSize, groupSpacing }) {
           height: normalizeCoordinate(blockSize?.height ?? DEFAULT_BLOCK_SIZE.height, "block height"),
         },
         groupSpacing: normalizeCoordinate(groupSpacing ?? DEFAULT_GROUP_SPACING, "group spacing"),
+        referenceStageSize: normalizeReferenceStageSize(referenceStageSize),
       })
     )
   } catch {

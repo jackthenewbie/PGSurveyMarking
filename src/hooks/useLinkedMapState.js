@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { DEFAULT_BLOCK_SIZE, DEFAULT_GROUP_SPACING, MIN_ZOOM_SCALE } from "../constants"
-import { normalizeSquareBlockSize } from "../utils/blockSize"
+import { hasStageSize } from "../utils/blockSize"
 import {
   clearPersistedAnnotationSettings,
   clearPersistedAnnotationState,
@@ -9,6 +9,7 @@ import {
   savePersistedAnnotationSettings,
   savePersistedAnnotationState,
 } from "../utils/browserStorage"
+import { scaleOverlaySizingToStage } from "../utils/overlaySizing"
 import { createDragHandlers } from "./linkedMapState/dragHandlers"
 import { applyGroupLayouts, flattenGroupedMarkerIds } from "./linkedMapState/groupLayouts"
 import { createAnnotationModeActions } from "./linkedMapState/interactionModes"
@@ -56,6 +57,13 @@ function areSnapshotsEqual(left, right) {
   return JSON.stringify(left) === JSON.stringify(right)
 }
 
+function areBlockSizesEqual(left, right) {
+  return (
+    Math.abs((left?.width ?? 0) - (right?.width ?? 0)) < 0.0001 &&
+    Math.abs((left?.height ?? 0) - (right?.height ?? 0)) < 0.0001
+  )
+}
+
 export function useLinkedMapState() {
   const persistedSettingsRef = useRef(loadPersistedAnnotationSettings())
   const nextPathIdRef = useRef(1)
@@ -69,6 +77,9 @@ export function useLinkedMapState() {
   const gestureStartSnapshotRef = useRef(null)
   const modeToastTimerRef = useRef(null)
   const pointerPositionRef = useRef({ x: 24, y: 24 })
+  const sizingReferenceStageRef = useRef(persistedSettingsRef.current?.referenceStageSize)
+  const blockSizeRef = useRef(persistedSettingsRef.current?.blockSize ?? DEFAULT_BLOCK_SIZE)
+  const groupSpacingRef = useRef(persistedSettingsRef.current?.groupSpacing ?? DEFAULT_GROUP_SPACING)
   const viewport = useViewport()
 
   const [pendingPoint, setPendingPoint] = useState(null)
@@ -95,6 +106,14 @@ export function useLinkedMapState() {
   const [spacingDragState, setSpacingDragState] = useState(null)
   const [dragBlockState, setDragBlockState] = useState(null)
   const [modeToast, setModeToast] = useState(null)
+
+  const getDefaultOverlaySizing = () =>
+    scaleOverlaySizingToStage({
+      blockSize: persistedSettingsRef.current?.blockSize ?? DEFAULT_BLOCK_SIZE,
+      groupSpacing: persistedSettingsRef.current?.groupSpacing ?? DEFAULT_GROUP_SPACING,
+      referenceStageSize: persistedSettingsRef.current?.referenceStageSize,
+      targetStageSize: stageSize,
+    })
 
   const showModeToast = (message, event) => {
     if (!showModeNotifications) return
@@ -194,8 +213,8 @@ export function useLinkedMapState() {
   }
 
   const resetters = createAnnotationResetters({
-    getDefaultBlockSize: () => persistedSettingsRef.current?.blockSize ?? DEFAULT_BLOCK_SIZE,
-    getDefaultGroupSpacing: () => persistedSettingsRef.current?.groupSpacing ?? DEFAULT_GROUP_SPACING,
+    getDefaultBlockSize: () => getDefaultOverlaySizing().blockSize,
+    getDefaultGroupSpacing: () => getDefaultOverlaySizing().groupSpacing,
     nextGroupIdRef,
     nextPathIdRef,
     setActiveMarkerId,
@@ -219,6 +238,7 @@ export function useLinkedMapState() {
   })
   const resetAnnotationStateAndHistory = () => {
     clearHistory()
+    sizingReferenceStageRef.current = hasStageSize(stageSize) ? { ...stageSize } : null
     resetters.resetAnnotationState()
   }
   const resetSavedSettings = () => {
@@ -226,6 +246,7 @@ export function useLinkedMapState() {
     clearPersistedAnnotationState()
     clearPersistedAnnotationSettings()
     persistedSettingsRef.current = null
+    sizingReferenceStageRef.current = hasStageSize(stageSize) ? { ...stageSize } : null
     resetters.resetAnnotationState()
   }
   const source = useLinkedMapSource({
@@ -237,6 +258,14 @@ export function useLinkedMapState() {
     const scale = Math.min(viewport.width / source.surfaceSize.width, viewport.height / source.surfaceSize.height)
     return { width: Math.round(source.surfaceSize.width * scale), height: Math.round(source.surfaceSize.height * scale) }
   }, [source.surfaceSize, viewport])
+
+  useEffect(() => {
+    blockSizeRef.current = blockSize
+  }, [blockSize])
+
+  useEffect(() => {
+    groupSpacingRef.current = groupSpacing
+  }, [groupSpacing])
 
   useEffect(() => {
     const persisted = loadPersistedAnnotationState()
@@ -253,6 +282,7 @@ export function useLinkedMapState() {
     setPaths(persisted.paths)
     setBlockSize(persisted.blockSize)
     setGroupSpacing(persisted.groupSpacing)
+    sizingReferenceStageRef.current = persisted.referenceStageSize
     nextPathIdRef.current =
       persisted.paths.reduce((maxPathId, path) => Math.max(maxPathId, path.id ?? 0), 0) + 1
     nextGroupIdRef.current =
@@ -260,20 +290,23 @@ export function useLinkedMapState() {
   }, [])
 
   useEffect(() => {
-    if (!stageSize.width || !stageSize.height) return
+    if (!hasStageSize(stageSize)) return
 
-    setBlockSize((current) => {
-      const next = normalizeSquareBlockSize(current, stageSize)
-
-      if (
-        Math.abs(next.width - current.width) < 0.0001 &&
-        Math.abs(next.height - current.height) < 0.0001
-      ) {
-        return current
-      }
-
-      return next
+    const scaledSizing = scaleOverlaySizingToStage({
+      blockSize: blockSizeRef.current,
+      groupSpacing: groupSpacingRef.current,
+      referenceStageSize: sizingReferenceStageRef.current,
+      targetStageSize: stageSize,
     })
+
+    sizingReferenceStageRef.current = scaledSizing.referenceStageSize
+
+    setBlockSize((current) =>
+      areBlockSizesEqual(scaledSizing.blockSize, current) ? current : scaledSizing.blockSize
+    )
+    setGroupSpacing((current) =>
+      Math.abs(scaledSizing.groupSpacing - current) < 0.0001 ? current : scaledSizing.groupSpacing
+    )
   }, [stageSize.height, stageSize.width])
 
   useEffect(() => {
@@ -325,14 +358,20 @@ export function useLinkedMapState() {
       groups,
       markers,
       paths,
+      referenceStageSize: sizingReferenceStageRef.current,
     })
   }, [blockSize, groupSpacing, groups, markers, paths])
 
   useEffect(() => {
-    persistedSettingsRef.current = { blockSize, groupSpacing }
+    persistedSettingsRef.current = {
+      blockSize,
+      groupSpacing,
+      referenceStageSize: sizingReferenceStageRef.current,
+    }
     savePersistedAnnotationSettings({
       blockSize,
       groupSpacing,
+      referenceStageSize: sizingReferenceStageRef.current,
     })
   }, [blockSize, groupSpacing])
 
@@ -463,6 +502,7 @@ export function useLinkedMapState() {
     groupSpacing,
     groups,
     markers,
+    stageSize,
     setBlockSize,
     setGroupSpacing,
     setGroups,
@@ -501,6 +541,7 @@ export function useLinkedMapState() {
     const snapshotBeforeRestore = createAnnotationSnapshot(annotationSnapshotRef.current)
     cancelGesture()
     persistenceActions.restoreCoordinates(text)
+    sizingReferenceStageRef.current = hasStageSize(stageSize) ? { ...stageSize } : null
     pushUndoSnapshot(snapshotBeforeRestore)
   }
 
