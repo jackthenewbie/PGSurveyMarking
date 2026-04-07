@@ -60,12 +60,15 @@ export function useLinkedMapState() {
   const persistedSettingsRef = useRef(loadPersistedAnnotationSettings())
   const nextPathIdRef = useRef(1)
   const nextGroupIdRef = useRef(1)
+  const nextModeToastIdRef = useRef(1)
   const hasLoadedPersistedStateRef = useRef(false)
   const skipNextPersistenceRef = useRef(true)
   const annotationSnapshotRef = useRef(null)
   const undoStackRef = useRef([])
   const redoStackRef = useRef([])
   const gestureStartSnapshotRef = useRef(null)
+  const modeToastTimerRef = useRef(null)
+  const pointerPositionRef = useRef({ x: 24, y: 24 })
   const viewport = useViewport()
 
   const [pendingPoint, setPendingPoint] = useState(null)
@@ -90,6 +93,32 @@ export function useLinkedMapState() {
   const [resizeState, setResizeState] = useState(null)
   const [spacingDragState, setSpacingDragState] = useState(null)
   const [dragBlockState, setDragBlockState] = useState(null)
+  const [modeToast, setModeToast] = useState(null)
+
+  const showModeToast = (message, event) => {
+    const isKeyboardActivated = event?.detail === 0
+    const x =
+      !isKeyboardActivated && event?.clientX != null ? event.clientX : pointerPositionRef.current.x
+    const y =
+      !isKeyboardActivated && event?.clientY != null ? event.clientY : pointerPositionRef.current.y
+    pointerPositionRef.current = { x, y }
+
+    if (modeToastTimerRef.current) {
+      window.clearTimeout(modeToastTimerRef.current)
+    }
+
+    setModeToast({
+      id: nextModeToastIdRef.current++,
+      message,
+      x,
+      y,
+    })
+
+    modeToastTimerRef.current = window.setTimeout(() => {
+      modeToastTimerRef.current = null
+      setModeToast(null)
+    }, 3000)
+  }
 
   const applyAnnotationSnapshot = (snapshot) => {
     cancelGesture()
@@ -251,6 +280,25 @@ export function useLinkedMapState() {
   }, [blockSize, groupSpacing, groups, stageSize.height, stageSize.width])
 
   useEffect(() => {
+    const updatePointerPosition = (event) => {
+      pointerPositionRef.current = { x: event.clientX, y: event.clientY }
+
+      setModeToast((current) =>
+        current ? { ...current, x: event.clientX, y: event.clientY } : current
+      )
+    }
+
+    window.addEventListener("pointermove", updatePointerPosition)
+    return () => {
+      window.removeEventListener("pointermove", updatePointerPosition)
+      if (modeToastTimerRef.current) {
+        window.clearTimeout(modeToastTimerRef.current)
+        modeToastTimerRef.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     if (!hasLoadedPersistedStateRef.current) return
     if (skipNextPersistenceRef.current) {
       skipNextPersistenceRef.current = false
@@ -305,6 +353,7 @@ export function useLinkedMapState() {
     setSelectMode,
     setSpacingDragState,
     spacingDragState,
+    showModeToast,
   })
   useKeyboardShortcuts({
     activeMarkerId,
@@ -470,6 +519,7 @@ export function useLinkedMapState() {
     mediaSource: source.mediaSource,
     mode: source.mode,
     paths,
+    modeToast,
     pendingPoint,
     restoreCoordinates,
     resetSavedSettings,

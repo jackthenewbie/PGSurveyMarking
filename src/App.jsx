@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Toolbar } from "./components/Toolbar";
 import { MapStage } from "./components/MapStage";
+import { ModeNotification } from "./components/ModeNotification";
 import { UploadScreen } from "./components/UploadScreen";
 import { useLinkedMapState } from "./hooks/useLinkedMapState";
 
@@ -111,6 +112,7 @@ export default function LinkedMapMarkerSite() {
           />
         </>
       )}
+      <ModeNotification key={state.modeToast?.id ?? "mode-toast"} notification={state.modeToast} />
     </div>
   );
 }

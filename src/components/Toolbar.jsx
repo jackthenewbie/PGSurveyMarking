@@ -124,7 +124,7 @@ export function Toolbar({
           </button>
           <button
             type="button"
-            onClick={onToggleFocusTrackingMode}
+            onClick={(event) => onToggleFocusTrackingMode(event)}
             style={
               focusTrackingMode
                 ? buttonStyle("1px solid #ffd54a", "rgba(255,213,74,0.16)", "#ffd54a")
@@ -142,7 +142,7 @@ export function Toolbar({
           </button>
           <button
             type="button"
-            onClick={onToggleSelectMode}
+            onClick={(event) => onToggleSelectMode(event)}
             style={
               selectMode
                 ? buttonStyle("1px solid lime", "rgba(0,255,0,0.15)", "lime")
@@ -153,7 +153,7 @@ export function Toolbar({
           </button>
           <button
             type="button"
-            onClick={onToggleGroupingMode}
+            onClick={(event) => onToggleGroupingMode(event)}
             style={
               groupingMode
                 ? buttonStyle("1px solid #ff6666", "rgba(255,64,64,0.18)", "#ff8d8d")

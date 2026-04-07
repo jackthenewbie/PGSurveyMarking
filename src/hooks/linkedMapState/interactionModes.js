@@ -19,6 +19,7 @@ export function createAnnotationModeActions({
   setSelectMode,
   setSpacingDragState,
   spacingDragState,
+  showModeToast,
 }) {
   function clearActiveInteraction() {
     setPendingPoint(null)
@@ -30,25 +31,37 @@ export function createAnnotationModeActions({
     setDragBlockState(null)
   }
 
-  function toggleSelectMode() {
+  function toggleSelectMode(event) {
     if (focusTrackingMode) return
-    setSelectMode((current) => !current)
+    const nextSelectMode = !selectMode
+    setSelectMode(nextSelectMode)
     setGroupingMode(false)
     clearActiveInteraction()
+    if (nextSelectMode) {
+      showModeToast?.("Path optimization enabled", event)
+    }
   }
 
-  function toggleGroupingMode() {
+  function toggleGroupingMode(event) {
     if (focusTrackingMode) return
-    setGroupingMode((current) => !current)
+    const nextGroupingMode = !groupingMode
+    setGroupingMode(nextGroupingMode)
     setSelectMode(false)
     clearActiveInteraction()
+    if (nextGroupingMode) {
+      showModeToast?.("Grouping mode enabled", event)
+    }
   }
 
-  function toggleFocusTrackingMode() {
-    setFocusTrackingMode((current) => !current)
+  function toggleFocusTrackingMode(event) {
+    const nextFocusTrackingMode = !focusTrackingMode
+    setFocusTrackingMode(nextFocusTrackingMode)
     setSelectMode(false)
     setGroupingMode(false)
     clearActiveInteraction()
+    if (nextFocusTrackingMode) {
+      showModeToast?.("Focus tracking enabled", event)
+    }
   }
 
   function activateMarker(markerId) {
