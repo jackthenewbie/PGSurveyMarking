@@ -37,7 +37,7 @@ export function createAnnotationModeActions({
     setSelectMode(nextSelectMode)
     setGroupingMode(false)
     clearActiveInteraction()
-    showModeToast?.(`Path creation ${nextSelectMode ? "enabled" : "disabled"}`, event)
+    showModeToast?.(`Draw path ${nextSelectMode ? "enabled" : "disabled"}`, event)
   }
 
   function toggleGroupingMode(event) {
